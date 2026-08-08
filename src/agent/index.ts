@@ -4,5 +4,7 @@ export * from "./discovery.js";
 export * from "./editorial.js";
 export * from "./generator.js";
 export * from "./lifecycle.js";
+export * from "./liveTopicDiscovery.js";
 export * from "./memory.js";
 export * from "./stubs.js";
+export * from "./sources/index.js";

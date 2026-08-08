@@ -108,4 +108,61 @@ describe("TopicRepository", () => {
     expect(list[0]!.decision).toBe("reject");
     expect(list[0]!.reasoning).toEqual({ novelty: 0.1, reason: "near-duplicate of t0" });
   });
+
+  it("persists a discovered candidate with a source publication timestamp", () => {
+    const { topics, agents } = buildTestApp();
+    agents.create({
+      id: "a1",
+      persona: { name: "Ada", domain: "AI Security" },
+      status: "active",
+      config: {},
+      createdAt: "2026-08-07T09:00:00.000Z",
+    });
+    const record: TopicRecord = {
+      id: "t-discovered",
+      agentId: "a1",
+      title: "A new paper",
+      summary: "A new paper on adversarial ML.",
+      sourceUrl: "https://example.com/paper",
+      sourceName: "ArXiv",
+      discoveredAt: "2026-08-08T05:00:00.000Z",
+      publishedAt: "2026-08-08T04:00:00.000Z",
+      decidedAt: undefined,
+      decision: "discovered",
+      reasoning: {},
+    };
+    topics.create(record);
+
+    const got = topics.listByAgent("a1")[0]!;
+    expect(got.decision).toBe("discovered");
+    expect(got.decidedAt).toBeUndefined();
+    expect(got.publishedAt).toBe("2026-08-08T04:00:00.000Z");
+  });
+
+  it("existsBySourceUrl reports pre-existing source URLs per agent", () => {
+    const { topics, agents } = buildTestApp();
+    agents.create({
+      id: "a1",
+      persona: { name: "Ada", domain: "AI Security" },
+      status: "active",
+      config: {},
+      createdAt: "2026-08-07T09:00:00.000Z",
+    });
+    const record: TopicRecord = {
+      id: "t1",
+      agentId: "a1",
+      title: "T",
+      summary: "",
+      sourceUrl: "https://example.com/unique",
+      sourceName: "S",
+      discoveredAt: "2026-08-07T10:00:00.000Z",
+      decision: "discovered",
+      reasoning: {},
+    };
+    topics.create(record);
+
+    expect(topics.existsBySourceUrl("a1", "https://example.com/unique")).toBe(true);
+    expect(topics.existsBySourceUrl("a1", "https://example.com/other")).toBe(false);
+    expect(topics.existsBySourceUrl("a2", "https://example.com/unique")).toBe(false);
+  });
 });

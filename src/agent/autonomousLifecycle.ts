@@ -1,6 +1,7 @@
-import type { Agent, TopicDecision, TopicRecord } from "../models/index.js";
+import type { Agent, TopicCandidate, TopicDecision, TopicRecord } from "../models/index.js";
 import type { Clock } from "../util/clock.js";
 import { generateId } from "../util/ids.js";
+import type { TopicRepository } from "../repositories/index.js";
 import type {
   AgentLifecycle,
   AgentMemory,
@@ -13,12 +14,16 @@ import type { TickResult } from "./lifecycle.js";
 /**
  * The autonomous lifecycle orchestrator.
  *
- * Runs one full cycle for an agent: discovery → editorial decision → (if
- * approved) content generation → memory/duplicate check → persist.
+ * Runs one full cycle for an agent: discovery → (persist discovered
+ * candidates) → editorial decision → (if approved) content generation →
+ * memory → publish.
  *
- * In Phase 2A the downstream components are no-op stubs, so a cycle completes
- * without publishing anything. This class is the seam where real discovery,
- * editorial, generation, and memory plug in during later phases.
+ * Phase 2B:
+ * - Discovery is a REAL live-source implementation.
+ * - Discovered candidates are persisted to the `topics` trail in a `discovered`
+ *   state (distinct from `publish`/`reject`) — discovery ≠ decision.
+ * - Editorial, generation, and memory remain no-op stubs, so a cycle completes
+ *   without publishing anything. That is expected and correct for this phase.
  */
 export class AutonomousLifecycle implements AgentLifecycle {
   constructor(
@@ -27,19 +32,26 @@ export class AutonomousLifecycle implements AgentLifecycle {
     private readonly generator: ContentGenerator,
     private readonly memory: AgentMemory,
     private readonly clock: Clock,
+    private readonly topics: TopicRepository,
+    private readonly log: (message: string) => void = () => {},
   ) {}
 
   /** Run one discovery → decision → generation → store cycle for an agent. */
   async tick(agent: Agent): Promise<TickResult> {
     const tickedAt = this.clock.now().toISOString();
 
-    // 1. Discover candidate topics.
+    // 1. Discover candidate topics from live sources.
     const candidates = await this.discovery.discover(agent.id);
 
-    // 2. Evaluate candidates (editorial decision).
+    // 2. Persist discovered candidates to the rejection/decision trail, in the
+    //    `discovered` state (before any editorial decision). A repeated source
+    //    item stored on a prior cycle is skipped, preventing duplicate rows.
+    this.persistDiscovered(agent.id, candidates);
+
+    // 3. Evaluate candidates (editorial decision).
     const verdicts = await this.editorial.evaluate(agent, candidates);
 
-    // 3. Pick the first approved candidate, if any.
+    // 4. Pick the first approved candidate, if any.
     const approved = verdicts.find((v) => v.decision === "publish");
     if (!approved) {
       return {
@@ -50,7 +62,7 @@ export class AutonomousLifecycle implements AgentLifecycle {
       };
     }
 
-    // 4. Memory / duplicate check before generating.
+    // 5. Memory / duplicate check before generating.
     const isDuplicate = await this.memory.isDuplicate(agent.id, approved.candidate);
     if (isDuplicate) {
       return {
@@ -61,11 +73,11 @@ export class AutonomousLifecycle implements AgentLifecycle {
       };
     }
 
-    // 5. Generate content (Phase 2A: no-op generator is never reached because
-    //    the no-op editorial engine never approves a candidate).
+    // 6. Generate content (stub in Phase 2B). Not reached because the no-op
+    //    editorial engine never approves a candidate.
     const draft = await this.generator.generate(agent, approved.candidate);
 
-    // 6. Persist the post (Phase 2A: not yet wired to a post repository).
+    // 7. Build the published topic record (post publication is a later phase).
     const topicRecord: TopicRecord = {
       id: generateId("t"),
       agentId: agent.id,
@@ -74,6 +86,7 @@ export class AutonomousLifecycle implements AgentLifecycle {
       sourceUrl: approved.candidate.sourceUrl,
       sourceName: approved.candidate.sourceName,
       discoveredAt: approved.candidate.discoveredAt,
+      publishedAt: approved.candidate.publishedAt,
       decidedAt: tickedAt,
       decision: "publish",
       reasoning: approved.reasoning,
@@ -85,7 +98,32 @@ export class AutonomousLifecycle implements AgentLifecycle {
       considered: candidates,
       decision: "publish",
       topic: topicRecord,
-      // `draft` is intentionally unused in Phase 2A; it will be persisted in a later phase.
+      // `draft` is intentionally unused in Phase 2B; it will be persisted in a later phase.
     };
+  }
+
+  /** Persist discovered candidates as `discovered` so they are not mis-stated as publish/reject. */
+  private persistDiscovered(agentId: string, candidates: TopicCandidate[]): void {
+    for (const candidate of candidates) {
+      if (this.topics.existsBySourceUrl(agentId, candidate.sourceUrl)) {
+        this.log(`[discovery] skipped already-persisted source for ${agentId}: ${candidate.sourceUrl}`);
+        continue;
+      }
+      const record: TopicRecord = {
+        id: generateId("t"),
+        agentId,
+        title: candidate.title,
+        summary: candidate.summary,
+        sourceUrl: candidate.sourceUrl,
+        sourceName: candidate.sourceName,
+        discoveredAt: candidate.discoveredAt,
+        publishedAt: candidate.publishedAt,
+        decidedAt: undefined,
+        decision: "discovered",
+        reasoning: {},
+      };
+      this.topics.create(record);
+      this.log(`[discovery] persisted discovered candidate ${record.id} (${agentId})`);
+    }
   }
 }

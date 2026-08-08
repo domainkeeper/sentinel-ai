@@ -10,6 +10,7 @@ describe("loadConfig", () => {
     expect(config.logLevel).toBe("info");
     expect(config.schedulerIntervalSeconds).toBe(3600);
     expect(config.discoveryRssFeeds).toEqual([]);
+    expect(config.discoveryHttpTimeoutMs).toBe(15000);
   });
 
   it("reads values from the environment", () => {
@@ -20,6 +21,7 @@ describe("loadConfig", () => {
       LOG_LEVEL: "debug",
       SCHEDULER_INTERVAL_SECONDS: "1800",
       DISCOVERY_RSS_FEEDS: "https://a.com/rss, https://b.com/rss",
+      DISCOVERY_HTTP_TIMEOUT_MS: "5000",
     });
     expect(config.env).toBe("production");
     expect(config.port).toBe(8080);
@@ -27,6 +29,13 @@ describe("loadConfig", () => {
     expect(config.logLevel).toBe("debug");
     expect(config.schedulerIntervalSeconds).toBe(1800);
     expect(config.discoveryRssFeeds).toEqual(["https://a.com/rss", "https://b.com/rss"]);
+    expect(config.discoveryHttpTimeoutMs).toBe(5000);
+  });
+
+  it("throws on an invalid DISCOVERY_HTTP_TIMEOUT_MS", () => {
+    expect(() => loadConfig({ DISCOVERY_HTTP_TIMEOUT_MS: "abc" })).toThrow(
+      /DISCOVERY_HTTP_TIMEOUT_MS/,
+    );
   });
 
   it("throws on an invalid PORT", () => {

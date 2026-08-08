@@ -12,11 +12,12 @@ import { AgentService, FeedService } from "./services/index.js";
 import {
   AutonomousLifecycle,
   AutonomousScheduler,
+  LiveTopicDiscovery,
   NoopAgentMemory,
   NoopContentGenerator,
   NoopEditorialEngine,
-  NoopTopicDiscovery,
 } from "./agent/index.js";
+import { buildSources } from "./agent/sources/index.js";
 import { SystemClock } from "./util/clock.js";
 
 /**
@@ -33,21 +34,33 @@ export function createApp(db: DatabaseSync, config: AppConfig) {
   const topics = new TopicRepository(db);
   const scheduling = new SchedulingRepository(db);
 
-  // Phase 2A: downstream components are no-op stubs. Later phases replace them.
+  const log = (msg: string) => console.log(msg);
+  const clock = new SystemClock();
+
+  // Phase 2B: real live-source discovery wired into the lifecycle. Discovery
+  // discovers ("what is happening"); editorial/generation/memory remain stubs.
+  const discovery = new LiveTopicDiscovery(
+    buildSources(config.discoveryRssFeeds, { timeoutMs: config.discoveryHttpTimeoutMs }),
+    clock,
+    log,
+  );
+
   const lifecycle = new AutonomousLifecycle(
-    new NoopTopicDiscovery(),
+    discovery,
     new NoopEditorialEngine(),
     new NoopContentGenerator(),
     new NoopAgentMemory(),
-    new SystemClock(),
+    clock,
+    topics,
+    log,
   );
 
   const scheduler = new AutonomousScheduler(
     lifecycle,
     scheduling,
-    new SystemClock(),
+    clock,
     config.schedulerIntervalSeconds,
-    (msg) => console.log(msg),
+    log,
   );
 
   const agentService = new AgentService(agents, scheduler);

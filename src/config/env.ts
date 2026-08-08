@@ -16,6 +16,8 @@ export interface AppConfig {
   openAiApiKey: string;
   /** Comma-separated RSS feed URLs for topic discovery. Empty in the foundation phase. */
   discoveryRssFeeds: string[];
+  /** Maximum milliseconds for one external topic-source HTTP request. */
+  discoveryHttpTimeoutMs: number;
 }
 
 function parsePositiveInt(value: string | undefined, fallback: number, name: string): number {
@@ -67,5 +69,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       .split(",")
       .map((f) => f.trim())
       .filter((f) => f.length > 0),
+    discoveryHttpTimeoutMs: parsePositiveInt(
+      env.DISCOVERY_HTTP_TIMEOUT_MS,
+      15000,
+      "DISCOVERY_HTTP_TIMEOUT_MS",
+    ),
   };
 }

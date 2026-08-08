@@ -211,3 +211,110 @@ Successfully completed Phase 2A. An agent can be initialized and is registered w
 ### Follow-up
 
 The next phase is **Phase 2B — Live Topic Discovery**: implement a real `TopicDiscovery` (e.g., RSS feeds) that returns candidate topics, so the lifecycle has actual candidates to evaluate. This will be followed by the editorial engine, LLM generation, and memory in later phases.
+
+---
+
+## Session 3 — Live Topic Discovery
+
+**Date:** 2026-08-08
+
+**Development phase:** Phase 2B — Live Topic Discovery
+
+**AI tool:** opencode (CLI)
+
+**Objective:** Replace the no-op discovery stub with a real, reliable live-information-source pipeline: fetch a live source (RSS), parse it safely, validate and normalize external data into the internal topic model, produce multiple candidate topics, persist discovered candidates without mistaking them for editorial decisions, and wire real discovery into the autonomous lifecycle — while leaving editorial scoring, LLM generation, memory, and publishing strictly unimplemented.
+
+The task specification explicitly required reading all documentation and the Phase 2A implementation before coding, keeping the API contract intact, and keeping the feed endpoint a pure reader.
+
+### Prompt / Instruction
+
+The session was directed by a detailed task specification requiring:
+
+1. Read all project documentation (blueprint, README, architecture, PROMPTS.md), inspect the Phase 2A code, and check git status first.
+2. Replace the `NoopTopicDiscovery` with a real `TopicDiscovery` implementation.
+3. Introduce a clean `TopicSource` abstraction so the lifecycle never cares whether a candidate came from RSS or a future source.
+4. Implement one reliable live source (RSS was the recommended backbone).
+5. Implement HTTP fetching with timeouts, response validation, RSS/XML parsing, normalization, and malformed-item handling.
+6. Gracefully handle source failures so the scheduler never dies and one bad item never kills a cycle.
+7. Persist discovered candidates appropriately without marking them `publish` or `reject` — preserve `DISCOVERED ≠ REJECTED ≠ PUBLISHED`.
+8. Add basic, deterministic source-level deduplication (no semantic/embedding dedup).
+9. Wire real discovery into `AutonomousLifecycle`, keeping the scheduler behavior and API contract intact.
+10. Add deterministic tests that mock external requests (no live websites).
+11. Update blueprint, README, architecture, PROMPTS.md, and DEVELOPMENT_STATE.md.
+12. Stop — do not implement Phase 2C (editorial), LLM generation, memory, or publishing.
+
+### AI Work
+
+opencode executed the following:
+
+1. **Read & audited** the full codebase (docs, models, repositories, services, lifecycle, scheduler, config, tests) and checked git status — an uncommitted `rss-parser` dependency and a partial `src/agent/sources/topicSource.ts` interface were already present in the working tree; built on them.
+2. **Extended the internal topic model** (`src/models/topic.ts`):
+   - `TopicCandidate` gained an optional `publishedAt` (source publication timestamp).
+   - `TopicDecision` became `"discovered" | "publish" | "reject"`; `TopicRecord` gained `publishedAt?` and made `decidedAt?` optional.
+3. **Extended the schema** (`src/db/schema.ts`): added a nullable `source_published_at` column, made `decided_at` nullable, defaulted `decision` to `discovered`, added an `(agent_id, source_url)` index, and an idempotent migration to add the new column to pre-existing tables.
+4. **Added `src/util/http.ts`** (`fetchText`) — a tiny first-party HTTP GET with a finite `AbortController` timeout (default 15s, configurable via `DISCOVERY_HTTP_TIMEOUT_MS`).
+5. **Implemented `src/agent/sources/rssFeedSource.ts`** (`RssFeedSource` + a pure `normalizeRssItems`): fetches XML via an injected `fetchXml`, parses it with `rss-parser` via an injected `parseFeed`, and normalizes each item while skipping/logging malformed items (missing title/link, duplicate link, unparseable date). `fetch()` never throws.
+6. **Implemented `src/agent/sources/index.ts`** — a small `buildSources(rssFeeds, opts)` registry returning `TopicSource[]`.
+7. **Implemented `src/agent/liveTopicDiscovery.ts`** (`LiveTopicDiscovery` + pure `normalizeToCandidates` / `deduplicateCandidates`): runs all sources with per-source failure isolation, normalizes items into candidates, stamps `discoveredAt` from the clock, and de-dupes by source URL (with a normalized-title fallback). Never throws.
+8. **Extended `TopicRepository`** with `existsBySourceUrl` and support for the new fields.
+9. **Wired real discovery into `AutonomousLifecycle`** — persists each discovered candidate to `topics` in the `discovered` state (skipping already-persisted source items) before the editorial stub, which still rejects everything.
+10. **Composition** (`src/app.ts`) now builds `LiveTopicDiscovery` from configured RSS feeds and passes the `TopicRepository` into the lifecycle, using a single shared `SystemClock`.
+11. **Updated config** (`src/config/env.ts`, `.env.example`) for `DISCOVERY_HTTP_TIMEOUT_MS`; test helpers and config tests updated accordingly.
+12. **Added deterministic tests** (`tests/discovery/rssFeedSource.test.ts`, `tests/discovery/liveTopicDiscovery.test.ts`, `tests/lifecycle.test.ts`, plus repository/config additions) using injected fakes — no real websites.
+13. **Verified** a live source manually against `https://hnrss.org/frontpage` (20 items fetched/parsed/normalized); an unreachable feed returned `[]` without throwing.
+
+### Files Affected
+
+**Created:**
+
+- `src/agent/sources/rssFeedSource.ts`
+- `src/agent/sources/index.ts`
+- `src/agent/liveTopicDiscovery.ts`
+- `src/util/http.ts`
+- `tests/discovery/rssFeedSource.test.ts`
+- `tests/discovery/liveTopicDiscovery.test.ts`
+- `tests/lifecycle.test.ts`
+- `DEVELOPMENT_STATE.md`
+
+(Note: `src/agent/sources/topicSource.ts` — the `TopicSource`/`DiscoveredItem` interface — existed as an untracked file in the working tree before this session; it was retained and completed here.)
+
+**Modified:**
+
+- `src/models/topic.ts` (`publishedAt`; `discovered` decision; optional `decidedAt`)
+- `src/db/schema.ts` (source_published_at, nullable decided_at, discovered default, source_url index, migration)
+- `src/repositories/topicRepository.ts` (new fields + `existsBySourceUrl`)
+- `src/agent/autonomousLifecycle.ts` (persist discovered candidates; inject topic repo)
+- `src/agent/index.ts` (export new modules)
+- `src/app.ts` (real discovery wiring)
+- `src/config/env.ts`, `.env.example` (timeout config)
+- `package.json`, `package-lock.json` (`rss-parser`, now used and tested)
+- `tests/helpers.ts`, `tests/config.test.ts`, `tests/repositories.test.ts`
+- `README.md`, `docs/architecture.md`, `autonomous-ai-creator-blueprint.md`, `PROMPTS.md`
+
+(`rss-parser` was already present as an uncommitted dependency in the working tree before this session; this session put it to use via an injectable parser seam and added tests.)
+
+### Architectural Decisions
+
+1. **`TopicSource` abstraction** (`name` + `fetch(): Promise<DiscoveredItem[]>`). The lifecycle is source-agnostic; RSS is the first concrete implementation, and GitHub/arXiv/news APIs can plug in later.
+2. **RSS as the initial live source.** Free, stable, pollable, low rate-limit risk — one reliable end-to-end pipeline before source diversity.
+3. **`rss-parser` for XML parsing** (small, well-maintained, no native deps) paired with a **first-party `fetchText`** HTTP helper for clean, bounded timeouts. No large networking/XML framework added.
+4. **Failure isolation at every level.** Each source is invoked independently; network/parse errors and malformed items degrade to "no candidates this tick" / "skip item," never to a crash.
+5. **Finite timeouts** on every external request (`AbortController`, configurable default 15s).
+6. **Discovery ≠ decision.** Candidates are persisted to the `topics` trail in the `discovered` state (`decided_at` null), never `publish`/`reject`.
+7. **Minimal deterministic deduplication** — canonical source URL (case-insensitive) + normalized-title fallback, both within a cycle and against already-persisted sources. No embeddings/vector DB.
+8. **Feed endpoint remains a pure reader** and the API contract is unchanged.
+
+### Verification
+
+- `npm run typecheck` — passes (strict TS).
+- `npm test` — **64/64 tests pass** (Phase 1 + Phase 2A regression + new discovery/source/persistence tests).
+- `npm run build` — passes (`tsc`).
+- Manual live check: `RssFeedSource` against `https://hnrss.org/frontpage` fetched 20 items and normalized titles/links/ISO timestamps; an unreachable feed returned `[]` without throwing.
+
+### Result
+
+Phase 2B completed. The autonomous loop now discovers real live topics from RSS, normalizes and validates them, de-duplicates basic repeats, and persists them to the `topics` trail in a `discovered` state (distinct from `publish`/`reject`). The editorial, generation, and memory components remain explicit no-op stubs, so no post is ever created — that is the correct state for this phase.
+
+### Follow-up
+
+The next phase is **Phase 2C — Editorial Decision Engine**: score and filter `discovered` candidates against a publish threshold and re-decide the ones selected, so discovered topics (not yet published posts) can begin to be assessed for publication. LLM generation, memory, and publishing cadence still follow later.

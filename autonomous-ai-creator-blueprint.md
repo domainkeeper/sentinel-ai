@@ -3,11 +3,14 @@
 
 ---
 
-> **Implementation status (Phase 2A — Autonomous Lifecycle + Scheduler):**
-> The autonomous lifecycle and scheduler described in this blueprint are now
-> implemented. See `docs/architecture.md` for the current technical state.
-> Live topic discovery, editorial scoring, LLM generation, and memory remain
-> future phases (the lifecycle invokes no-op stubs for these today).
+> **Implementation status (Phase 2B — Live Topic Discovery):**
+> The autonomous lifecycle + scheduler (Phase 2A) and live topic discovery
+> (Phase 2B) described in this blueprint are now implemented. See
+> `docs/architecture.md` for the current technical state.
+> Live discovery now runs against real curated RSS feeds and persists
+> `discovered` candidates to the `topics` trail. Editorial scoring, LLM
+> generation, and memory remain future phases (the lifecycle still invokes
+> no-op stubs for these today).
 
 ---
 

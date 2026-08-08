@@ -12,6 +12,7 @@ export function buildTestApp(overrides: Partial<AppConfig> = {}) {
     schedulerIntervalSeconds: 3600,
     openAiApiKey: "",
     discoveryRssFeeds: [],
+    discoveryHttpTimeoutMs: 15000,
     ...overrides,
   };
   const db = openDatabase(config);
