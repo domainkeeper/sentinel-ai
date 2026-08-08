@@ -8,5 +8,7 @@ export * from "./generatorImpl.js";
 export * from "./lifecycle.js";
 export * from "./liveTopicDiscovery.js";
 export * from "./memory.js";
+export * from "./sqliteMemory.js";
+export * from "./publishingPolicy.js";
 export * from "./stubs.js";
 export * from "./sources/index.js";

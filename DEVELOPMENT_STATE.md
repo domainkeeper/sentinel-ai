@@ -7,7 +7,7 @@
 
 ## Current Phase
 
-Phase 2D — Content Generation + Rationale
+Phase 3A — Memory & Publication
 
 ## Project Identity
 
@@ -21,7 +21,7 @@ exactly once, then only polls `GET /api/agent/feed` for ~48 hours. No further pr
 
 ## Current Objective
 
-Implement real LLM-backed content generation and specific, falsifiable rationale generation for approved editorial topics (`LlmContentGenerator`), complete with configuration, prompt isolation, strict prompt-injection defense, output validation, finite timeouts, error/rate-limit handling, lifecycle integration, and comprehensive unit tests.
+Implement persistent SQLite-backed agent memory with exact and near-duplicate Jaccard similarity detection, agent isolation, publishing policy controls (cooldown and sliding window frequency caps), and real autonomous post persistence exposed through the feed endpoint.
 
 ## Implemented
 
@@ -30,17 +30,23 @@ Implement real LLM-backed content generation and specific, falsifiable rationale
 - Autonomous scheduler & lifecycle with restart recovery and failure isolation.
 - Live topic discovery from curated RSS feeds (`TopicSource`, `RssFeedSource`, `LiveTopicDiscovery`, timeout, deduplication).
 - Deterministic Editorial Decision Engine (`DeterministicEditorialEngine`) scoring across relevance, freshness, novelty, source quality, and persona fit against threshold (default 60), persisting structured reasoning and decisions in the `topics` audit trail.
-- **Content Generation + Rationale (`LlmContentGenerator`)**:
-  - Provider-agnostic `ContentGenerator` abstraction supporting Gemini, OpenAI, and mock providers.
-  - Environment configuration (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_MS`) with zero secrets committed.
-  - Isolated prompt builder (`buildGenerationPrompt`) with strict XML boundaries (`<persona>`, `<editorial_decision>`, `<topic>`, `<source_material>`, `<output_requirements>`) defending against prompt injection.
-  - Robust output validation and sanitization (`validateAndSanitizeOutput`) ensuring mandatory text and rationale fields, length limits, and application-controlled source attribution.
-  - Lifecycle integration: approved topics undergo LLM generation while rejected topics bypass generation entirely. Failures, timeouts, and rate limits are safely caught and isolated.
+- LLM Content Generation + Rationale (`LlmContentGenerator`) with Gemini/OpenAI/mock providers, prompt injection defense, validation, and timeouts.
+- **Persistent Memory (`SqliteAgentMemory`)**:
+  - Exact source URL and title matching against recent posts.
+  - Near-duplicate detection via Jaccard token similarity with time-aware lookback (default 7 days).
+  - Strict agent isolation (`agent_id` scoping).
+  - Survives process restarts via SQLite `posts` persistence.
+- **Publishing Policy (`PublishingPolicy`)**:
+  - Cooldown gaps between publications (default 60 minutes).
+  - Sliding-window frequency caps (`maxPostsPerWindow` default 5 posts in 24 hours).
+  - Supports no-post ticks gracefully on slow news days.
+- **Autonomous Publication & Persistence**:
+  - Validated generated posts are persisted to the SQLite `posts` table with server-side UTC ISO 8601 timestamps and unique application IDs.
+  - Feed endpoint (`GET /api/agent/feed`) serves persisted posts newest-first as a pure reader.
 
 ## Not Implemented (intentionally deferred)
 
-- Memory with semantic deduplication and long-term post retrieval.
-- Publishing cadence / cooldown system (posts table stays empty; publishing belongs to Phase 2E).
+- External social media network integrations (LinkedIn / X API publishing; simulated via SQLite and feed endpoint per hackathon rules).
 
 ## Architecture
 
@@ -54,7 +60,9 @@ AutonomousLifecycle.persistDiscovered → topics (decision = "discovered")
 DeterministicEditorialEngine.evaluate → verdicts → topics.updateDecision (publish / reject)
     ↓
 IF reject: stop
-IF approve: LlmContentGenerator.generate → validated draft + rationale → persisted in decision reasoning
+IF approve: Memory Pre-Check (SqliteAgentMemory) → Publishing Policy Check (PublishingPolicy)
+    ↓
+LlmContentGenerator.generate → Final Memory Check → Persist Post (posts table) → Remember
     ↓
 GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 ```
@@ -63,13 +71,11 @@ GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 
 - Feed endpoint (`GET /api/agent/feed`) is a **pure reader**; it never triggers discovery, generation, or scheduling.
 - `init` does **not** synchronously generate posts.
-- The scheduler owns autonomous execution; one tick == one discovery & editorial & generation cycle.
+- The scheduler owns autonomous execution; one tick == one discovery & editorial & generation & publishing cycle.
 - Editorial engine is deterministic, explainable, and testable without LLMs.
-- Discovered candidates are initially stored as `discovered` and updated to `publish` or `reject` upon editorial evaluation.
-- Approved candidates are transformed into drafts by the content generator; rejected candidates never invoke the generator.
+- Memory checks are agent-scoped (strict isolation).
 - No secrets committed; SQLite (`node:sqlite`) stays the persistence layer.
 - LLM failures, timeouts, and rate limits do not crash or hang the autonomous scheduler.
-- Source material is treated strictly as untrusted data.
 
 ## Current Data Model
 
@@ -87,25 +93,24 @@ GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 ## Current AI Components
 
 - **Scheduler** — ✅ Implemented (`AutonomousScheduler`).
-- **Lifecycle** — ✅ Implemented (`AutonomousLifecycle`; discovery, editorial, and generator wired in).
+- **Lifecycle** — ✅ Implemented (`AutonomousLifecycle`; discovery, editorial, memory, policy, and generator wired in).
 - **Discovery** — ✅ Implemented (`LiveTopicDiscovery` + `RssFeedSource`).
 - **Editorial** — ✅ Implemented (`DeterministicEditorialEngine`).
-- **Generator** — ✅ Implemented (`LlmContentGenerator` + prompt builder + validator).
-- **Memory** — 🔲 Stub (`NoopAgentMemory`).
+- **Generator** — ✅ Implemented (`LlmContentGenerator`).
+- **Memory** — ✅ Implemented (`SqliteAgentMemory`).
+- **Policy** — ✅ Implemented (`PublishingPolicy`).
 
 ## Tests
 
-Last verified: `npm run typecheck` passes (strict TS); `npm test` **71/71 pass** (including `tests/generator.test.ts`).
+Last verified: `npm run typecheck` passes (strict TS); `npm test` **74/74 pass** (including `tests/memoryAndPublishing.test.ts`).
 
 ## Important Architectural Decisions
 
 1. Node.js + TypeScript + Express; SQLite via Node's built-in `node:sqlite`.
 2. Feed = pure reader; scheduler owns autonomous execution.
-3. Deterministic, rule-based scoring across 5 axes against a threshold (default 60).
-4. Content generation strictly downstream of editorial approval (rejected topics never invoke the LLM).
-5. Isolated prompt builder with XML tags separating persona, editorial decision, topic, and untrusted source material for prompt-injection defense.
-6. Application-controlled canonical source attribution (model cannot override source URLs).
-7. Timeout and failure isolation: LLM errors, timeouts, and rate limits are caught safely so the scheduler remains alive.
+3. Deterministic Jaccard token similarity for near-duplicate detection against recent SQLite posts.
+4. Agent isolation across memory and publishing policy checks.
+5. Cooldown and sliding window limits to prevent bursty behavior and ensure sustainable cadence over 48 hours.
 
 ## Known Issues
 
@@ -113,17 +118,16 @@ Last verified: `npm run typecheck` passes (strict TS); `npm test` **71/71 pass**
 
 ## Deferred Work
 
-- Memory with semantic deduplication.
-- Publishing cadence / cooldown system (Phase 2E).
+- Deployment hardening / production process manager configuration.
 
 ## Exact Next Phase
 
-Phase 2E — Memory & Publishing.
+None required for core hackathon submission; system is fully complete and operational.
 
 ## Last Completed Session
 
-Session 5 — Content Generation + Rationale.
+Session 6 — Phase 3A: Memory & Publication.
 
 ## Last Verified Commit
 
-Working tree contains Phase 2D implementation.
+Working tree contains Phase 3A implementation.

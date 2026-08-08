@@ -12,10 +12,11 @@ import { AgentService, FeedService } from "./services/index.js";
 import {
   AutonomousLifecycle,
   AutonomousScheduler,
+  DeterministicEditorialEngine,
   LiveTopicDiscovery,
-  NoopAgentMemory,
-  NoopContentGenerator,
-  NoopEditorialEngine,
+  LlmContentGenerator,
+  SqliteAgentMemory,
+  PublishingPolicy,
 } from "./agent/index.js";
 import { buildSources } from "./agent/sources/index.js";
 import { SystemClock } from "./util/clock.js";
@@ -45,13 +46,20 @@ export function createApp(db: DatabaseSync, config: AppConfig) {
     log,
   );
 
+  const editorial = new DeterministicEditorialEngine(clock);
+  const generator = new LlmContentGenerator(config);
+  const memory = new SqliteAgentMemory(posts);
+  const publishingPolicy = new PublishingPolicy(posts, clock);
+
   const lifecycle = new AutonomousLifecycle(
     discovery,
-    new NoopEditorialEngine(),
-    new NoopContentGenerator(),
-    new NoopAgentMemory(),
+    editorial,
+    generator,
+    memory,
+    publishingPolicy,
     clock,
     topics,
+    posts,
     log,
   );
 

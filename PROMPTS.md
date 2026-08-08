@@ -496,3 +496,95 @@ Phase 2D completed successfully. Sentinel AI now transforms approved editorial t
 ### Follow-up
 
 The next phase will be **Phase 2E — Memory & Publishing** (semantic deduplication and publishing cadence/cooldown).
+
+---
+
+## Session 6 — Phase 3A: Memory & Publication
+
+**Date:** 2026-08-08
+
+**Development phase:** Phase 3A — Memory & Publication
+
+**AI tool:** OpenCode
+
+**Objective:** Implement persistent SQLite-backed agent memory with exact and near-duplicate Jaccard similarity detection, agent isolation, publishing policy controls (cooldown and sliding window frequency caps), and real autonomous post persistence exposed through the feed endpoint.
+
+### Prompt / Instruction
+
+Problem Statement 3 — Phase 3A Memory & Publication:
+1. Audit Phase 2D implementation and existing memory stubs.
+2. Design and implement a persistent SQLite-backed `SqliteAgentMemory` enforcing agent isolation and time-aware lookback.
+3. Implement exact source URL matching, title matching, and near-duplicate Jaccard token similarity detection.
+4. Design and implement `PublishingPolicy` enforcing configurable cooldown gaps and sliding-window maximum post limits.
+5. Wire memory pre-checks, publishing policy checks, content generation, final memory checks, post creation/persistence, and audit trail updates into `AutonomousLifecycle`.
+6. Ensure feed endpoint remains a pure reader of persisted posts.
+7. Add comprehensive unit and integration tests covering memory, publication, cooldown, limits, restart survival, and multi-agent isolation.
+8. Verify typecheck (`tsc --noEmit`), full test suite (`vitest`), and build (`tsc`).
+9. Update documentation (`autonomous-ai-creator-blueprint.md`, `README.md`, `docs/architecture.md`, `PROMPTS.md`, `DEVELOPMENT_STATE.md`).
+
+### AI Work
+
+OpenCode executed the following:
+
+1. **Audited Phase 2D:** Verified LLM content generation, prompt construction, and validation seams.
+2. **Implemented Persistent Memory (`SqliteAgentMemory` in `src/agent/sqliteMemory.ts`):**
+   - Scopes publication retrieval and duplicate checks strictly by `agentId` (agent isolation).
+   - Performs exact source URL matching and normalized title matching.
+   - Implements near-duplicate detection via Jaccard token similarity against recent posts within a configurable lookback window (default 7 days).
+3. **Implemented Publishing Policy (`PublishingPolicy` in `src/agent/publishingPolicy.ts`):**
+   - Enforces a minimum cooldown gap between successive publications (default 60 minutes).
+   - Enforces sliding-window frequency caps (`maxPostsPerWindow` default 5 posts in 24 hours).
+   - Supports "no-post ticks" gracefully when policy or memory blocks a candidate.
+4. **Wired into `AutonomousLifecycle` (`src/agent/autonomousLifecycle.ts`):**
+   - Discovery → Persist Discovered → Editorial Decision → Memory Pre-Check → Publishing Policy Check → LLM Generation → Final Memory Check → Persist Post → Remember.
+5. **Wired into Application Composition (`src/app.ts`):**
+   - Instantiated real `DeterministicEditorialEngine`, `LlmContentGenerator`, `SqliteAgentMemory`, and `PublishingPolicy` in `createApp`.
+6. **Wrote Comprehensive Tests (`tests/memoryAndPublishing.test.ts` & updated `tests/lifecycle.test.ts`):**
+   - Verified exact and near-duplicate detection.
+   - Verified agent isolation (Agent A's posts do not block Agent B).
+   - Verified cooldown and sliding window frequency limit enforcement.
+7. **Verified:**
+   - `npm run typecheck` passes with strict TypeScript rules.
+   - `npm test` passes **74/74 tests** successfully.
+   - `npm run build` passes cleanly (`tsc`).
+8. **Updated Documentation:** Synchronized `autonomous-ai-creator-blueprint.md`, `README.md`, `docs/architecture.md`, `PROMPTS.md`, and `DEVELOPMENT_STATE.md`.
+
+### Files Affected
+
+**Created:**
+- `src/agent/sqliteMemory.ts`
+- `src/agent/publishingPolicy.ts`
+- `tests/memoryAndPublishing.test.ts`
+
+**Modified:**
+- `src/agent/index.ts`
+- `src/agent/autonomousLifecycle.ts`
+- `src/app.ts`
+- `tests/lifecycle.test.ts`
+- `autonomous-ai-creator-blueprint.md`
+- `README.md`
+- `docs/architecture.md`
+- `PROMPTS.md`
+- `DEVELOPMENT_STATE.md`
+
+### Architectural Decisions
+
+1. **SQLite-Backed Persistent Memory:** Memory is derived from the persisted `posts` table, ensuring memory survives process restarts without needing an external vector database or redis.
+2. **Deterministic Jaccard Token Similarity:** Near-duplicate detection uses token overlap with stop-word filtering, providing fast, reliable, explainable similarity checks without embedding API latency or cost.
+3. **Agent Isolation:** All memory queries and publishing policy checks are strictly filtered by `agent_id`, preventing cross-agent contamination.
+4. **Defense-in-Depth Duplicate Checking:** Pre-generation checks stop repetitive topics before calling the LLM; post-generation checks ensure generated text isn't a near-duplicate.
+5. **Restraint & Cadence:** Cooldown gaps and sliding-window limits prevent posting bursts and support quiet/no-post ticks during slow news cycles.
+
+### Verification
+
+- `npm run typecheck` — passes with no errors.
+- `npm test` — **74/74 tests pass** cleanly.
+- `npm run build` — passes (`tsc`).
+
+### Result
+
+Phase 3A completed successfully. Sentinel AI is now fully autonomous: discovering live RSS topics, evaluating them editorially, performing memory duplicate checks, enforcing publication cooldown and frequency limits, generating persona-consistent posts with rationales via LLM, and persisting them to SQLite for public feed consumption across process restarts.
+
+### Follow-up
+
+The system is fully operational for the 48-hour evaluation window. Further operational monitoring or deployment hardening can follow if needed.

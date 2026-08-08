@@ -8,7 +8,7 @@ The system is designed around one constraint: the evaluator calls `POST /api/age
 
 ---
 
-## Status: Phase 2D — Content Generation + Rationale
+## Status: Phase 3A — Memory & Publication
 
 This repository currently contains:
 
@@ -19,10 +19,12 @@ This repository currently contains:
 - ✅ Discovery persistence: candidates are stored in the `topics` trail in a `discovered` state and updated with editorial decisions (`publish`/`reject`)
 - ✅ **Editorial Decision Engine**: a real deterministic rule-based scoring and threshold engine evaluating relevance, freshness, novelty, source quality, and persona fit with structured rejection reasons and persisted scores
 - ✅ **Content Generation + Rationale (`LlmContentGenerator`)**: transforms approved topics into persona-consistent social posts and specific, falsifiable rationales using Gemini, OpenAI, or mock providers with strict prompt boundaries, input/output validation, finite timeouts, and error isolation
-- ✅ Graceful failure handling, finite HTTP timeouts, and basic source-level deduplication
-- ✅ Test suite (71 tests) + strict typecheck + build verification
+- ✅ **Persistent Memory (`SqliteAgentMemory`)**: exact source URL, title, and near-duplicate Jaccard token similarity detection with time-aware lookback, scoped strictly by `agentId` (agent isolation), surviving process restarts
+- ✅ **Publishing Policy (`PublishingPolicy`)**: cooldown gaps and sliding-window frequency limits preventing publication bursts and respecting "no-post ticks" on slow news days
+- ✅ **Autonomous Publication**: validated generated drafts and rationales are persisted to the SQLite `posts` table with server-side UTC ISO 8601 timestamps and unique application IDs, exposed through the feed endpoint
+- ✅ Test suite (74 tests) + strict typecheck + build verification
 
-**Not yet implemented:** memory (semantic deduplication) and final post publishing cadence (the posts table stays empty as publishing is deferred to Phase 2E). Approved topics undergo LLM generation and generate verified drafts/reasoning stored in the audit trail, but feed publishing is decoupled.
+**Not yet implemented:** advanced vector/embedding semantic search (local Jaccard token similarity and source-url matching fulfill memory requirements cleanly at this scale).
 
 See [docs/architecture.md](docs/architecture.md) for full details.
 

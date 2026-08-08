@@ -3,16 +3,15 @@
 
 ---
 
-> **Implementation status (Phase 2D — Content Generation + Rationale):**
+> **Implementation status (Phase 3A — Memory & Publication):**
 > The autonomous lifecycle + scheduler (Phase 2A), live topic discovery
-> (Phase 2B), editorial decision engine (Phase 2C), and content generation +
-> rationale (Phase 2D) described in this blueprint are now implemented. See
-> `docs/architecture.md` for the current technical state.
-> Live discovery polls curated RSS feeds; editorial evaluates candidates;
-> `LlmContentGenerator` transforms approved topics into persona-consistent posts
-> and structured rationales via Gemini/OpenAI/mock providers with strict security
-> boundaries, timeouts, and validation. Memory and publishing cadence remain
-> future phases.
+> (Phase 2B), editorial decision engine (Phase 2C), content generation +
+> rationale (Phase 2D), and memory & publication (Phase 3A) described in this
+> blueprint are now implemented. See `docs/architecture.md` for the current
+> technical state.
+> Persistent SQLite-backed memory with exact and near-duplicate Jaccard similarity
+> detection, agent isolation, publishing policy (cooldown and sliding window
+> frequency caps), and real post persistence are fully operational.
 
 ---
 

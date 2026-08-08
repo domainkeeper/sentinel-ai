@@ -8,7 +8,7 @@
 
 Problem Statement 3 — Autonomous AI Creator. The evaluator calls `POST /api/agent/init` exactly once, then only polls `GET /api/agent/feed` for ~48 hours. The system must become autonomous immediately after initialization: discover live topics, decide what to publish, write in a consistent voice, remember prior content, and continue publishing over time — all without further human prompts.
 
-## Current Phase (Phase 2D — Content Generation + Rationale)
+## Current Phase (Phase 3A — Memory & Publication)
 
 This repository currently implements:
 
@@ -19,8 +19,9 @@ This repository currently implements:
 - **Discovery persistence**: candidates stored in the `topics` trail in a `discovered` state and updated with editorial decisions (`publish`/`reject`).
 - **Deterministic Editorial Decision Engine**: rule-based evaluation across relevance, freshness, novelty, source quality, and persona fit against a configurable threshold (default 60), with structured scoring and rejection reasons persisted in SQLite.
 - **Content Generation + Rationale (`LlmContentGenerator`)**: transforms approved topics into persona-consistent social posts and specific, falsifiable editorial rationales via Gemini, OpenAI, or mock providers with prompt-injection defense, strict schema validation, finite request timeouts, and error isolation.
-
-**Autonomous publishing to the public feed is NOT yet implemented.** A scheduler cycle discovers live topics, evaluates them editorially, and generates persona-consistent drafts and rationales for approved topics, but final post persistence and publishing cadence (Phase 2E) remain deferred.
+- **Persistent Memory (`SqliteAgentMemory`)**: exact source URL/title matching and near-duplicate Jaccard token similarity detection with agent isolation and SQLite persistence.
+- **Publishing Policy (`PublishingPolicy`)**: cooldown gaps and sliding-window frequency caps governing autonomous publication.
+- **Post Persistence & Feed**: validated generated posts are persisted to the SQLite `posts` table and exposed via `GET /api/agent/feed` (newest-first, pure reader).
 
 ## Architecture Diagram
 
@@ -68,7 +69,10 @@ This repository currently implements:
 | `RssFeedSource` | ✅ Implemented | Fetch (HTTP + timeout) → parse (rss-parser) → normalize/validate items. |
 | `LiveTopicDiscovery` | ✅ Implemented | Runs all sources, normalizes to candidates, in-cycle de-duplication. |
 | Editorial Decision | ✅ Implemented | `DeterministicEditorialEngine` scores candidates across relevance, freshness, novelty, source quality, and persona fit against a threshold (default 60), persisting structured verdicts and reasons. |
+| Memory | ✅ Implemented | `SqliteAgentMemory` SQLite-backed exact and near-duplicate (Jaccard similarity) detection scoped by agentId. |
+| Publishing Policy | ✅ Implemented | `PublishingPolicy` enforces cooldown and sliding window limits. |
 | Content Generation | ✅ Implemented | `LlmContentGenerator` transforms approved topics into persona-consistent posts and specific, falsifiable rationales via Gemini/OpenAI/mock with prompt boundaries, validation, and timeouts. |
+| Post Persistence | ✅ Implemented | Validated generated posts persisted to SQLite `posts` table with server-side timestamps. |
 | Memory | 🔲 Stub | `NoopAgentMemory` returns no posts, never a duplicate. |
 
 ## Scheduler Design

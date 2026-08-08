@@ -6,7 +6,10 @@ import {
   NoopAgentMemory,
   NoopContentGenerator,
   NoopEditorialEngine,
+  SqliteAgentMemory,
+  PublishingPolicy,
 } from "../src/agent/index.js";
+import { PostRepository } from "../src/repositories/index.js";
 import type { TopicDiscovery } from "../src/agent/index.js";
 import type { Agent, TopicCandidate } from "../src/models/index.js";
 import { FakeClock } from "./fakeClock.js";
@@ -45,15 +48,19 @@ function lifecycleSetup(candidates: TopicCandidate[]) {
   const db = openDatabase({ databasePath: ":memory:" });
   const agents = new AgentRepository(db);
   const topics = new TopicRepository(db);
+  const posts = new PostRepository(db);
+  const clock = new FakeClock();
   const lifecycle = new AutonomousLifecycle(
     new StubDiscovery(candidates),
     new NoopEditorialEngine(),
     new NoopContentGenerator(),
-    new NoopAgentMemory(),
-    new FakeClock(),
+    new SqliteAgentMemory(posts),
+    new PublishingPolicy(posts, clock),
+    clock,
     topics,
+    posts,
   );
-  return { db, agents, topics, lifecycle };
+  return { db, agents, topics, posts, lifecycle };
 }
 
 describe("AutonomousLifecycle + discovery persistence", () => {
