@@ -1,5 +1,6 @@
 import type { Agent, AgentStatus, Persona } from "../models/index.js";
 import type { AgentRepository } from "../repositories/index.js";
+import type { Scheduler } from "../agent/index.js";
 import { generateAgentId, nowIso } from "../util/ids.js";
 
 export interface InitAgentInput {
@@ -13,14 +14,17 @@ export interface InitAgentResult {
 /**
  * Core service for agent lifecycle operations.
  *
- * In the foundation phase this handles initialization and feed retrieval.
- * The autonomous loop (scheduler → discovery → editorial → generation → memory)
- * is wired in later phases; this service is the seam where it will attach.
+ * Initialization creates the agent record and registers it with the
+ * autonomous scheduler, which starts its lifecycle on a cadence. Init does
+ * NOT generate posts or block on autonomous work — it returns immediately.
  */
 export class AgentService {
-  constructor(private readonly agents: AgentRepository) {}
+  constructor(
+    private readonly agents: AgentRepository,
+    private readonly scheduler: Scheduler,
+  ) {}
 
-  /** Create a new agent and return its ID. */
+  /** Create a new agent, register its lifecycle, and return its ID. */
   initAgent(input: InitAgentInput): InitAgentResult {
     const agent: Agent = {
       id: generateAgentId(),
@@ -33,6 +37,7 @@ export class AgentService {
       createdAt: nowIso(),
     };
     this.agents.create(agent);
+    this.scheduler.registerAgent(agent);
     return { agentId: agent.id };
   }
 

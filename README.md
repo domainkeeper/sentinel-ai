@@ -8,17 +8,19 @@ The system is designed around one constraint: the evaluator calls `POST /api/age
 
 ---
 
-## Status: Foundation Phase
+## Status: Phase 2A — Autonomous Lifecycle + Scheduler
 
-This repository currently contains the **technical foundation**:
+This repository currently contains:
 
-- ✅ Persistent SQLite storage (agents, posts, topic decisions)
+- ✅ Persistent SQLite storage (agents, posts, topic decisions, scheduling state)
 - ✅ The exact API contract (`init` + `feed`)
-- ✅ The lifecycle seam: interfaces for scheduler, discovery, editorial engine, generator, and memory
+- ✅ The autonomous lifecycle + scheduler (per-agent, persisted next-run, restart recovery, failure isolation, graceful shutdown)
+- ✅ Initialization wires the agent into the autonomous lifecycle
+- ✅ The lifecycle seam: interfaces for discovery, editorial engine, generator, and memory (no-op stubs in this phase)
 - ✅ Configuration foundation (`.env.example`, no secrets)
-- ✅ Test suite (19 tests) + strict typecheck
+- ✅ Test suite (35 tests) + strict typecheck
 
-**Not yet implemented:** the autonomous scheduler, live topic discovery, editorial scoring, LLM generation, and memory. These are defined as interfaces and will be implemented in subsequent phases. Autonomous publishing does **not** exist yet.
+**Not yet implemented:** live topic discovery, editorial scoring, LLM generation, and memory. These are invoked as no-op stubs by the lifecycle. Autonomous publishing does **not** exist yet — a scheduler cycle completes without creating posts.
 
 See [docs/architecture.md](docs/architecture.md) for full details.
 
@@ -141,6 +143,10 @@ docs/             # Architecture docs
 3. **Feed is a pure reader; generation is scheduler-only.**
 4. **Interfaces before implementation** — later phases plug into defined seams.
 5. **Rejection trail is a first-class table** (`topics`) for editorial-transparency.
+6. **Scheduler state is persisted in SQLite** (`scheduling` table) — last run, next run, active flag survive restarts; recovery preserves the persisted next-run rather than resetting it.
+7. **A clock abstraction** (`Clock`) lets the scheduler be tested deterministically with a fake clock — no flaky real-time delays.
+8. **Failure isolation** — a failed cycle is caught, logged, and the next run is still scheduled; the scheduler never dies from a single bad cycle.
+9. **Duplicate-loop prevention** — `registerAgent` is idempotent and `start()` is a no-op if already running.
 
 ---
 

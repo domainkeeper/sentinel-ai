@@ -8,16 +8,17 @@
 
 Problem Statement 3 — Autonomous AI Creator. The evaluator calls `POST /api/agent/init` exactly once, then only polls `GET /api/agent/feed` for ~48 hours. The system must become autonomous immediately after initialization: discover live topics, decide what to publish, write in a consistent voice, remember prior content, and continue publishing over time — all without further human prompts.
 
-## Current Phase (Foundation)
+## Current Phase (Phase 2A — Autonomous Lifecycle + Scheduler)
 
-This repository currently implements the **foundation phase**:
+This repository currently implements:
 
-- Persistent storage (SQLite) with agents, posts, and topic-decision tables.
+- Persistent SQLite storage (agents, posts, topic decisions, **scheduling state**).
 - The exact API contract (`init` + `feed`).
-- The lifecycle seam: interfaces for the scheduler, discovery, editorial engine, generator, and memory that later phases will implement.
-- A test suite and configuration foundation.
+- **The autonomous lifecycle + scheduler**: per-agent scheduling, persisted next-run, restart recovery, failure isolation, and graceful shutdown.
+- **Initialization wires the agent into the autonomous lifecycle** (registers it with the scheduler).
+- The lifecycle seam: interfaces for discovery, editorial engine, generator, and memory — **no-op stubs in this phase**.
 
-**Autonomous publishing is NOT yet implemented.** The scheduler, live topic discovery, editorial reasoning, LLM content generation, and memory are stubbed as interfaces only.
+**Autonomous publishing is NOT yet implemented.** A scheduler cycle completes without creating posts. Live topic discovery, editorial scoring, LLM generation, and memory are stubs.
 
 ## Architecture Diagram
 
@@ -26,19 +27,24 @@ This repository currently implements the **foundation phase**:
                        │   Init Endpoint      │
                        │  POST /api/agent/init│
                        └──────────┬───────────┘
-                                  │ creates
+                                  │ creates + registers
                                   ▼
                        ┌─────────────────────┐
                        │   Agent Record        │  (SQLite: agents)
                        │ (persona + config)    │
                        └──────────┬───────────┘
-                                  │ starts (foundation: interface only)
+                                  │
                                   ▼
         ┌───────────────────────────────────────────┐
-        │              Autonomous Loop                │  Scheduler interface
-        │        (scheduler → discovery → decision →  │  (NOT implemented yet)
-        │         generation → memory → store)        │
+        │              Autonomous Scheduler          │  (SQLite: scheduling)
+        │  per-agent loop → checkDue → runCycle      │
         └───────────────────────────────────────────┘
+                                  │
+                                  ▼
+                       ┌─────────────────────┐
+                       │  Autonomous Lifecycle │  (discovery → editorial →
+                       │  (orchestrator)       │   generation → memory)
+                       └─────────────────────┘
                                   │
                                   ▼
                        ┌─────────────────────┐
@@ -51,37 +57,88 @@ This repository currently implements the **foundation phase**:
 
 | Component | Status | Responsibility |
 |---|---|---|
-| `POST /api/agent/init` | ✅ Implemented | Validate persona, create agent record (persistent), return `agentId`. Does **not** generate posts. |
+| `POST /api/agent/init` | ✅ Implemented | Validate persona, create agent record (persistent), **register with scheduler**, return `agentId`. Does **not** generate posts. |
 | `GET /api/agent/feed` | ✅ Implemented | Pure read of persisted posts, newest-first. Never triggers generation. |
-| Repositories | ✅ Implemented | `agents`, `posts`, `topics` — SQLite-backed CRUD + queries. |
-| Scheduler | 🔲 Interface only | `src/agent/lifecycle.ts` — `Scheduler` interface. |
-| Topic Discovery | 🔲 Interface only | `src/agent/discovery.ts` — `TopicDiscovery` interface. |
-| Editorial Decision | 🔲 Interface only | `src/agent/editorial.ts` — `EditorialDecisionEngine` interface. |
-| Content Generation | 🔲 Interface only | `src/agent/generator.ts` — `ContentGenerator` interface. |
-| Memory | 🔲 Interface only | `src/agent/memory.ts` — `AgentMemory` interface. |
+| Repositories | ✅ Implemented | `agents`, `posts`, `topics`, `scheduling` — SQLite-backed CRUD + queries. |
+| `AutonomousScheduler` | ✅ Implemented | Per-agent scheduling loop; persisted next-run; restart recovery; failure isolation; graceful shutdown; duplicate-loop prevention. |
+| `AutonomousLifecycle` | ✅ Implemented | Orchestrates one cycle: discovery → editorial → generation → memory. |
+| Topic Discovery | 🔲 Stub | `NoopTopicDiscovery` returns no candidates. |
+| Editorial Decision | 🔲 Stub | `NoopEditorialEngine` rejects everything. |
+| Content Generation | 🔲 Stub | `NoopContentGenerator` (never reached in Phase 2A). |
+| Memory | 🔲 Stub | `NoopAgentMemory` returns no posts, never a duplicate. |
 
-## Project Structure
+## Scheduler Design
+
+The `AutonomousScheduler` is a simple, reliable per-agent scheduler:
+
+- **Per-agent scheduling**: each agent has a persisted `SchedulingState` (last run, next run, active).
+- **`registerAgent`** is idempotent — it never creates a duplicate in-memory loop. On recovery it preserves the persisted `nextRunAt` rather than resetting it.
+- **`start()`** runs a single polling loop that calls `checkDue()` on a cadence. Calling `start()` twice is a no-op (no duplicate loops).
+- **`checkDue()`** is public so tests can drive it deterministically with a fake clock (no real-time delays).
+- **`recover(agents)`** re-registers all active agents from the `scheduling` table after a restart, preserving persisted next-run.
+- **`stop()`** clears the timer and marks the scheduler stopped.
+
+### Scheduling flow
 
 ```
-sentinel-ai/
-├─ src/
-│  ├─ agent/            # Autonomous lifecycle interfaces (discovery, editorial, generator, memory, lifecycle)
-│  ├─ api/              # HTTP routes + validation
-│  ├─ config/           # Environment configuration
-│  ├─ db/               # SQLite connection + schema
-│  ├─ models/           # Domain types (Agent, Post, Topic, Persona)
-│  ├─ repositories/     # Data access (agents, posts, topics)
-│  ├─ services/         # Application services (agent init, feed read)
-│  ├─ util/             # ID / timestamp helpers
-│  ├─ app.ts            # Composition root (Express app)
-│  └─ index.ts          # Entrypoint
-├─ tests/               # Vitest suite
-├─ docs/architecture.md # This document
-├─ .env.example         # Environment template (no secrets)
-├─ autonomous-ai-creator-blueprint.md  # Master plan (Claude)
-├─ PROMPTS.md           # AI usage log
-└─ README.md
+Agent initialized
+    ↓
+Agent persisted (agents table)
+    ↓
+Lifecycle registered (scheduler.registerAgent)
+    ↓
+Next run persisted (scheduling table)
+    ↓
+Scheduler waits (polling loop)
+    ↓
+Cycle due (checkDue)
+    ↓
+AutonomousLifecycle.tick(agent)  ← discovery → editorial → generation → memory
+    ↓
+Run state persisted (last_run_at, next_run_at)
+    ↓
+Repeat
 ```
+
+## Persisted Scheduling State
+
+The `scheduling` table stores, per agent:
+
+| Column | Type | Notes |
+|---|---|---|
+| `agent_id` | TEXT PK / FK | Owning agent |
+| `last_run_at` | TEXT (ISO UTC) | Last completed cycle (or null) |
+| `next_run_at` | TEXT (ISO UTC) | Next scheduled run |
+| `active` | INTEGER | Whether the agent is scheduled |
+| `created_at` | TEXT (ISO UTC) | Record creation |
+| `updated_at` | TEXT (ISO UTC) | Last update |
+
+This state survives process restarts, enabling restart recovery.
+
+## Restart Recovery
+
+On application start, `scheduler.recover(agents.listAll())`:
+
+- Reads all active scheduling records.
+- Re-registers each agent with the scheduler.
+- **Preserves the persisted `nextRunAt`** — a future next-run stays in the future; a past next-run becomes due immediately on the next `checkDue()`.
+
+## Failure Handling
+
+A failed cycle is caught and isolated:
+
+- The error is logged.
+- The agent's next run is **still scheduled** (the scheduler never dies from a single bad cycle).
+- Future cycles remain possible.
+
+## Graceful Shutdown
+
+On `SIGINT`/`SIGTERM`:
+
+- `scheduler.stop()` clears the polling timer.
+- The HTTP server closes.
+- The database closes cleanly.
+- No dangling timers remain.
 
 ## Data Model
 
@@ -118,6 +175,16 @@ Indexed by `(agent_id, created_at DESC)` for newest-first feed reads.
 | `decision` | TEXT | `publish` / `reject` |
 | `reasoning` | TEXT (JSON) | Structured scoring / reject reason |
 
+### scheduling
+| Column | Type | Notes |
+|---|---|---|
+| `agent_id` | TEXT PK / FK | Owning agent |
+| `last_run_at` | TEXT (ISO UTC) | Last completed cycle (or null) |
+| `next_run_at` | TEXT (ISO UTC) | Next scheduled run |
+| `active` | INTEGER | Whether the agent is scheduled |
+| `created_at` | TEXT (ISO UTC) | Record creation |
+| `updated_at` | TEXT (ISO UTC) | Last update |
+
 ## API Contract
 
 ```
@@ -135,16 +202,19 @@ GET /api/agent/feed?agentId=abc-123
 ## Key Architectural Decisions
 
 1. **Node.js + TypeScript + Express.** Fast to develop, well-known, and sufficient for a solo hackathon.
-2. **SQLite via Node's built-in `node:sqlite` (`DatabaseSync`).** Zero-dependency, no native compilation issues on Windows, durable, and exactly matches the blueprint's recommended default. `node:sqlite` is experimental in Node 24 but stable enough for this scale.
+2. **SQLite via Node's built-in `node:sqlite` (`DatabaseSync`).** Zero-dependency, no native compilation issues on Windows, durable, and exactly matches the blueprint's recommended default.
 3. **Feed endpoint is a pure reader.** Generation is never triggered by a GET. This preserves the autonomous-only lifecycle the judges expect.
-4. **`init` never generates posts synchronously.** It only creates the agent record. Publishing happens on the scheduler's clock (once implemented).
-5. **Interfaces before implementation.** The lifecycle, discovery, editorial, generator, and memory seams are defined as interfaces so later phases plug in cleanly without rework.
+4. **`init` never generates posts synchronously.** It only creates the agent record and registers it with the scheduler. Publishing happens on the scheduler's clock.
+5. **Interfaces before implementation.** The lifecycle, discovery, editorial, generator, and memory seams are defined as interfaces so later phases plug in cleanly.
 6. **Environment variables for all configuration.** `.env.example` documents them; no secrets are committed.
-7. **Rejection trail is a first-class table.** `topics` records every considered topic and its decision, enabling the "considered and rejected" transparency the blueprint prioritizes.
+7. **Rejection trail is a first-class table.** `topics` records every considered topic and its decision.
+8. **Scheduler state is persisted in SQLite** (`scheduling` table) — last run, next run, active flag survive restarts; recovery preserves the persisted next-run rather than resetting it.
+9. **A clock abstraction** (`Clock`) lets the scheduler be tested deterministically with a fake clock — no flaky real-time delays.
+10. **Failure isolation** — a failed cycle is caught, logged, and the next run is still scheduled; the scheduler never dies from a single bad cycle.
+11. **Duplicate-loop prevention** — `registerAgent` is idempotent and `start()` is a no-op if already running.
 
 ## Not Implemented (Next Phases)
 
-- Scheduler / background worker (persisted next-run state, restart resilience).
 - Live topic discovery (RSS/news APIs).
 - Editorial scoring engine (novelty, relevance, importance, freshness, persona fit).
 - LLM content generation + rationale.
@@ -155,9 +225,9 @@ GET /api/agent/feed?agentId=abc-123
 
 ## Testing
 
-- `npm test` — Vitest suite (19 tests): API contract, repositories + persistence, config parsing.
+- `npm test` — Vitest suite (35 tests): API contract, repositories + persistence, config parsing, scheduler behavior, scheduling persistence, restart recovery, failure isolation.
 - `npm run typecheck` — strict TypeScript check.
-- Uses an in-memory SQLite database for isolation.
+- Uses an in-memory SQLite database for isolation; a fake clock drives the scheduler deterministically.
 
 ## Running
 

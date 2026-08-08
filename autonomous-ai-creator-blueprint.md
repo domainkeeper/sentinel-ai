@@ -3,6 +3,14 @@
 
 ---
 
+> **Implementation status (Phase 2A — Autonomous Lifecycle + Scheduler):**
+> The autonomous lifecycle and scheduler described in this blueprint are now
+> implemented. See `docs/architecture.md` for the current technical state.
+> Live topic discovery, editorial scoring, LLM generation, and memory remain
+> future phases (the lifecycle invokes no-op stubs for these today).
+
+---
+
 ## 1. Project Understanding
 
 ### What the judges actually care about

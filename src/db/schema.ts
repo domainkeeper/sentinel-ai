@@ -46,5 +46,15 @@ export function createSchema(db: DatabaseSync): void {
 
     CREATE INDEX IF NOT EXISTS idx_topics_agent_created
       ON topics (agent_id, discovered_at DESC);
+
+    CREATE TABLE IF NOT EXISTS scheduling (
+      agent_id    TEXT PRIMARY KEY,
+      last_run_at TEXT,
+      next_run_at TEXT NOT NULL,
+      active      INTEGER NOT NULL DEFAULT 1,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+    );
   `);
 }

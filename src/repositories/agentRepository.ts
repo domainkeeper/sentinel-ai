@@ -52,4 +52,10 @@ export class AgentRepository {
   updateStatus(id: string, status: Agent["status"]): void {
     this.db.prepare(`UPDATE agents SET status = ? WHERE id = ?`).run(status, id);
   }
+
+  /** List all agent records. */
+  listAll(): Agent[] {
+    const rows = this.db.prepare(`SELECT * FROM agents`).all() as unknown as AgentRow[];
+    return rows.map(rowToAgent);
+  }
 }

@@ -35,6 +35,16 @@ describe("POST /api/agent/init", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("registers the agent with the autonomous lifecycle", async () => {
+    const { app, scheduler } = buildTestApp();
+    const res = await request(app).post("/api/agent/init").send({
+      persona: { name: "Ada", domain: "AI Security" },
+    });
+    expect(res.status).toBe(201);
+    // The agent is now registered with the scheduler (autonomous lifecycle).
+    expect(scheduler.registeredCount()).toBe(1);
+  });
 });
 
 describe("GET /api/agent/feed", () => {
@@ -63,6 +73,15 @@ describe("GET /api/agent/feed", () => {
   it("returns 404 for an unknown agentId", async () => {
     const res = await request(ctx.app).get("/api/agent/feed?agentId=does-not-exist");
     expect(res.status).toBe(404);
+  });
+
+  it("feed polling does not generate posts (pure reader)", async () => {
+    // Poll the feed repeatedly; it must never trigger generation.
+    for (let i = 0; i < 3; i++) {
+      const res = await request(ctx.app).get(`/api/agent/feed?agentId=${agentId}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ posts: [] });
+    }
   });
 
   it("returns stored posts newest first with correct shape", async () => {
