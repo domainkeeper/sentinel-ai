@@ -70,6 +70,17 @@ export class TopicRepository {
     return row !== undefined;
   }
 
+  /** Update the decision, decided_at, and reasoning of an existing topic record by source URL. */
+  updateDecision(agentId: string, sourceUrl: string, decision: TopicRecord["decision"], decidedAt: string, reasoning: Record<string, unknown>): void {
+    this.db
+      .prepare(
+        `UPDATE topics
+         SET decision = ?, decided_at = ?, reasoning = ?
+         WHERE agent_id = ? AND source_url = ?`,
+      )
+      .run(decision, decidedAt, JSON.stringify(reasoning), agentId, sourceUrl);
+  }
+
   /** List topic decisions for an agent, most recent first. */
   listByAgent(agentId: string): TopicRecord[] {
     const rows = this.db

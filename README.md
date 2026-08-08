@@ -8,7 +8,7 @@ The system is designed around one constraint: the evaluator calls `POST /api/age
 
 ---
 
-## Status: Phase 2B — Live Topic Discovery
+## Status: Phase 2C — Editorial Decision Engine
 
 This repository currently contains:
 
@@ -16,13 +16,14 @@ This repository currently contains:
 - ✅ The exact API contract (`init` + `feed`)
 - ✅ The autonomous lifecycle + scheduler (per-agent, persisted next-run, restart recovery, failure isolation, graceful shutdown)
 - ✅ **Live topic discovery** from real RSS feeds through a clean `TopicSource` abstraction
-- ✅ Discovery persistence: candidates are stored in the `topics` trail in a `discovered` state (distinct from `publish`/`reject`)
+- ✅ Discovery persistence: candidates are stored in the `topics` trail in a `discovered` state and updated with editorial decisions (`publish`/`reject`)
+- ✅ **Editorial Decision Engine**: a real deterministic rule-based scoring and threshold engine evaluating relevance, freshness, novelty, source quality, and persona fit with structured rejection reasons and persisted scores
 - ✅ Graceful failure handling, finite HTTP timeouts, and basic source-level deduplication
-- ✅ The lifecycle seam: interfaces for discovery, editorial engine, generator, and memory (discovery is real; the rest are still no-op stubs)
+- ✅ The lifecycle seam: interfaces for discovery, editorial engine, generator, and memory (discovery & editorial are real; generator and memory are still no-op stubs)
 - ✅ Configuration foundation (`.env.example`, no secrets)
-- ✅ Test suite (64 tests) + strict typecheck
+- ✅ Test suite (67 tests) + strict typecheck
 
-**Not yet implemented:** editorial scoring, LLM generation, and memory. Discovery now finds real live topics and persists them as `discovered`, but the editorial engine (Phase 2C) still rejects everything, so **autonomous publishing does not exist yet** — a scheduler cycle discovers topics but creates no posts.
+**Not yet implemented:** content/LLM generation and memory/semantic deduplication. The editorial engine now evaluates and approves/rejects discovered candidates, but the content generator is still a stub, so **publishing does not exist yet** — a scheduler cycle discovers and decides on topics but creates no posts.
 
 See [docs/architecture.md](docs/architecture.md) for full details.
 
@@ -165,7 +166,7 @@ docs/             # Architecture docs
 9. **Duplicate-loop prevention** — `registerAgent` is idempotent and `start()` is a no-op if already running.
 10. **A `TopicSource` abstraction** — the lifecycle never cares whether a candidate came from RSS, GitHub, arXiv, or a future source; it receives normalized candidates.
 11. **RSS as the initial live source** — free, simple, stable, low rate-limit risk; one reliable source before source diversity. `rss-parser` (a small, well-maintained parser) is used; HTTP fetching + timeouts are handled by a tiny first-party `fetchText` helper with a finite `AbortController` timeout.
-12. **Discovery is not editorial.** Discovered candidates are persisted to `topics` in a `discovered` state (`decided_at` null, never `publish`/`reject`). The distinct states `discovered ≠ rejected ≠ published` become critical in Phase 2C.
+12. **Discovery & Editorial Decisions.** Discovered candidates are initially stored in `topics` as `discovered`. The deterministic editorial decision engine then evaluates each candidate across 5 dimensions (relevance, freshness, novelty, source quality, persona fit), applies a publish threshold (default 60), and updates the decision to `publish` or `reject` with structured reasoning persisted in the audit trail.
 13. **Basic, deterministic source-level deduplication** — identical source URLs (and a normalized-title fallback) are collapsed within a cycle and against already-persisted sources. No semantic/embedding dedup yet (that is the memory phase).
 
 ---

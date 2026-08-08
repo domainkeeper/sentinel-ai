@@ -6,9 +6,9 @@ import type {
   AgentLifecycle,
   AgentMemory,
   ContentGenerator,
-  EditorialDecisionEngine,
   TopicDiscovery,
 } from "./index.js";
+import type { EditorialDecisionEngine, EditorialVerdict } from "./editorial.js";
 import type { TickResult } from "./lifecycle.js";
 
 /**
@@ -51,6 +51,9 @@ export class AutonomousLifecycle implements AgentLifecycle {
     // 3. Evaluate candidates (editorial decision).
     const verdicts = await this.editorial.evaluate(agent, candidates);
 
+    // 3b. Persist editorial decisions (reject or approve) for the audit trail.
+    this.persistDecisions(agent.id, verdicts, tickedAt);
+
     // 4. Pick the first approved candidate, if any.
     const approved = verdicts.find((v) => v.decision === "publish");
     if (!approved) {
@@ -73,8 +76,7 @@ export class AutonomousLifecycle implements AgentLifecycle {
       };
     }
 
-    // 6. Generate content (stub in Phase 2B). Not reached because the no-op
-    //    editorial engine never approves a candidate.
+    // 6. Generate content (stub in Phase 2C). Not reached because generator is still stub.
     const draft = await this.generator.generate(agent, approved.candidate);
 
     // 7. Build the published topic record (post publication is a later phase).
@@ -98,8 +100,23 @@ export class AutonomousLifecycle implements AgentLifecycle {
       considered: candidates,
       decision: "publish",
       topic: topicRecord,
-      // `draft` is intentionally unused in Phase 2B; it will be persisted in a later phase.
     };
+  }
+
+  /** Persist editorial decisions into the topics table. */
+  private persistDecisions(agentId: string, verdicts: EditorialVerdict[], decidedAt: string): void {
+    for (const verdict of verdicts) {
+      if (this.topics.existsBySourceUrl(agentId, verdict.candidate.sourceUrl)) {
+        this.topics.updateDecision(
+          agentId,
+          verdict.candidate.sourceUrl,
+          verdict.decision,
+          decidedAt,
+          verdict.reasoning,
+        );
+        this.log(`[editorial] updated decision for ${agentId} (${verdict.candidate.sourceUrl}): ${verdict.decision}`);
+      }
+    }
   }
 
   /** Persist discovered candidates as `discovered` so they are not mis-stated as publish/reject. */

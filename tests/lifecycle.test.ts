@@ -57,7 +57,7 @@ function lifecycleSetup(candidates: TopicCandidate[]) {
 }
 
 describe("AutonomousLifecycle + discovery persistence", () => {
-  it("persists discovered candidates as `discovered` (not publish/reject) and publishes nothing", async () => {
+  it("persists discovered candidates as `discovered` initially and updates decision after editorial", async () => {
     const { db, agents, topics, lifecycle } = lifecycleSetup([
       candidate({ sourceUrl: "https://example.com/1" }),
       candidate({ sourceUrl: "https://example.com/2" }),
@@ -66,15 +66,15 @@ describe("AutonomousLifecycle + discovery persistence", () => {
 
     const result = await lifecycle.tick(agent);
 
-    // Editorial stub rejects everything (expected in Phase 2B): no publication.
+    // Editorial stub rejects everything: decision is reject.
     expect(result.decision).toBe("reject");
     expect(result.considered).toHaveLength(2);
 
     const stored = topics.listByAgent("a1");
     expect(stored).toHaveLength(2);
     for (const t of stored) {
-      expect(t.decision).toBe("discovered");
-      expect(t.decidedAt).toBeUndefined();
+      expect(t.decision).toBe("reject");
+      expect(t.decidedAt).toBeDefined();
       expect(t.sourceName).toBe("Example Blog");
     }
     db.close();

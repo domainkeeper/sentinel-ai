@@ -8,7 +8,7 @@
 
 Problem Statement 3 — Autonomous AI Creator. The evaluator calls `POST /api/agent/init` exactly once, then only polls `GET /api/agent/feed` for ~48 hours. The system must become autonomous immediately after initialization: discover live topics, decide what to publish, write in a consistent voice, remember prior content, and continue publishing over time — all without further human prompts.
 
-## Current Phase (Phase 2B — Live Topic Discovery)
+## Current Phase (Phase 2C — Editorial Decision Engine)
 
 This repository currently implements:
 
@@ -16,9 +16,10 @@ This repository currently implements:
 - The exact API contract (`init` + `feed`).
 - **The autonomous lifecycle + scheduler**: per-agent scheduling, persisted next-run, restart recovery, failure isolation, and graceful shutdown.
 - **Real live topic discovery** from RSS feeds through a `TopicSource` abstraction.
-- **Discovery persistence**: candidates stored in the `topics` trail in a `discovered` state (distinct from `publish`/`reject`).
+- **Discovery persistence**: candidates stored in the `topics` trail in a `discovered` state and updated with editorial decisions (`publish`/`reject`).
+- **Deterministic Editorial Decision Engine**: rule-based evaluation across relevance, freshness, novelty, source quality, and persona fit against a configurable threshold (default 60), with structured scoring and rejection reasons persisted in SQLite.
 
-**Autonomous publishing is NOT yet implemented.** A scheduler cycle now discovers real live topics and persists them as `discovered`, but the editorial engine, LLM generation, and memory are still no-op stubs — so no post is ever created.
+**Autonomous publishing is NOT yet implemented.** A scheduler cycle discovers live topics and evaluates them editorially, but the content generator and memory are still no-op stubs — so no final post is ever created.
 
 ## Architecture Diagram
 
@@ -65,7 +66,7 @@ This repository currently implements:
 | `TopicSource` (abstraction) | ✅ Implemented | Source-agnostic interface producing normalized `DiscoveredItem`s. |
 | `RssFeedSource` | ✅ Implemented | Fetch (HTTP + timeout) → parse (rss-parser) → normalize/validate items. |
 | `LiveTopicDiscovery` | ✅ Implemented | Runs all sources, normalizes to candidates, in-cycle de-duplication. |
-| Editorial Decision | 🔲 Stub | `NoopEditorialEngine` rejects everything. |
+| Editorial Decision | ✅ Implemented | `DeterministicEditorialEngine` scores candidates across relevance, freshness, novelty, source quality, and persona fit against a threshold (default 60), persisting structured verdicts and reasons. |
 | Content Generation | 🔲 Stub | `NoopContentGenerator` (never reached). |
 | Memory | 🔲 Stub | `NoopAgentMemory` returns no posts, never a duplicate. |
 
