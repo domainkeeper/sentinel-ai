@@ -8,7 +8,7 @@
 
 Problem Statement 3 — Autonomous AI Creator. The evaluator calls `POST /api/agent/init` exactly once, then only polls `GET /api/agent/feed` for ~48 hours. The system must become autonomous immediately after initialization: discover live topics, decide what to publish, write in a consistent voice, remember prior content, and continue publishing over time — all without further human prompts.
 
-## Current Phase (Phase 2C — Editorial Decision Engine)
+## Current Phase (Phase 2D — Content Generation + Rationale)
 
 This repository currently implements:
 
@@ -18,8 +18,9 @@ This repository currently implements:
 - **Real live topic discovery** from RSS feeds through a `TopicSource` abstraction.
 - **Discovery persistence**: candidates stored in the `topics` trail in a `discovered` state and updated with editorial decisions (`publish`/`reject`).
 - **Deterministic Editorial Decision Engine**: rule-based evaluation across relevance, freshness, novelty, source quality, and persona fit against a configurable threshold (default 60), with structured scoring and rejection reasons persisted in SQLite.
+- **Content Generation + Rationale (`LlmContentGenerator`)**: transforms approved topics into persona-consistent social posts and specific, falsifiable editorial rationales via Gemini, OpenAI, or mock providers with prompt-injection defense, strict schema validation, finite request timeouts, and error isolation.
 
-**Autonomous publishing is NOT yet implemented.** A scheduler cycle discovers live topics and evaluates them editorially, but the content generator and memory are still no-op stubs — so no final post is ever created.
+**Autonomous publishing to the public feed is NOT yet implemented.** A scheduler cycle discovers live topics, evaluates them editorially, and generates persona-consistent drafts and rationales for approved topics, but final post persistence and publishing cadence (Phase 2E) remain deferred.
 
 ## Architecture Diagram
 
@@ -67,7 +68,7 @@ This repository currently implements:
 | `RssFeedSource` | ✅ Implemented | Fetch (HTTP + timeout) → parse (rss-parser) → normalize/validate items. |
 | `LiveTopicDiscovery` | ✅ Implemented | Runs all sources, normalizes to candidates, in-cycle de-duplication. |
 | Editorial Decision | ✅ Implemented | `DeterministicEditorialEngine` scores candidates across relevance, freshness, novelty, source quality, and persona fit against a threshold (default 60), persisting structured verdicts and reasons. |
-| Content Generation | 🔲 Stub | `NoopContentGenerator` (never reached). |
+| Content Generation | ✅ Implemented | `LlmContentGenerator` transforms approved topics into persona-consistent posts and specific, falsifiable rationales via Gemini/OpenAI/mock with prompt boundaries, validation, and timeouts. |
 | Memory | 🔲 Stub | `NoopAgentMemory` returns no posts, never a duplicate. |
 
 ## Scheduler Design

@@ -3,14 +3,16 @@
 
 ---
 
-> **Implementation status (Phase 2B — Live Topic Discovery):**
-> The autonomous lifecycle + scheduler (Phase 2A) and live topic discovery
-> (Phase 2B) described in this blueprint are now implemented. See
+> **Implementation status (Phase 2D — Content Generation + Rationale):**
+> The autonomous lifecycle + scheduler (Phase 2A), live topic discovery
+> (Phase 2B), editorial decision engine (Phase 2C), and content generation +
+> rationale (Phase 2D) described in this blueprint are now implemented. See
 > `docs/architecture.md` for the current technical state.
-> Live discovery now runs against real curated RSS feeds and persists
-> `discovered` candidates to the `topics` trail. Editorial scoring, LLM
-> generation, and memory remain future phases (the lifecycle still invokes
-> no-op stubs for these today).
+> Live discovery polls curated RSS feeds; editorial evaluates candidates;
+> `LlmContentGenerator` transforms approved topics into persona-consistent posts
+> and structured rationales via Gemini/OpenAI/mock providers with strict security
+> boundaries, timeouts, and validation. Memory and publishing cadence remain
+> future phases.
 
 ---
 

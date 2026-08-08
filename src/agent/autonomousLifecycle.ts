@@ -76,10 +76,21 @@ export class AutonomousLifecycle implements AgentLifecycle {
       };
     }
 
-    // 6. Generate content (stub in Phase 2C). Not reached because generator is still stub.
-    const draft = await this.generator.generate(agent, approved.candidate);
+    // 6. Generate content using the real generator (Phase 2D).
+    let draft;
+    try {
+      draft = await this.generator.generate(agent, approved.candidate, approved, verdicts);
+    } catch (err) {
+      this.log(`[generator] error generating content for ${agent.id}: ${err instanceof Error ? err.message : String(err)}`);
+      return {
+        agentId: agent.id,
+        tickedAt,
+        considered: candidates,
+        decision: "reject" as TopicDecision,
+      };
+    }
 
-    // 7. Build the published topic record (post publication is a later phase).
+    // 7. Build the published topic record (post publication / persistence is a later phase).
     const topicRecord: TopicRecord = {
       id: generateId("t"),
       agentId: agent.id,
@@ -91,7 +102,12 @@ export class AutonomousLifecycle implements AgentLifecycle {
       publishedAt: approved.candidate.publishedAt,
       decidedAt: tickedAt,
       decision: "publish",
-      reasoning: approved.reasoning,
+      reasoning: {
+        ...approved.reasoning,
+        generatedText: draft.text,
+        generatedRationale: draft.rationale,
+        sources: draft.sources,
+      },
     };
 
     return {

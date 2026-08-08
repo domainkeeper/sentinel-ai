@@ -12,8 +12,14 @@ export interface AppConfig {
   databasePath: string;
   logLevel: LogLevel;
   schedulerIntervalSeconds: number;
-  /** LLM provider API key. Empty in the foundation phase. */
-  openAiApiKey: string;
+  /** LLM provider API key. */
+  llmApiKey: string;
+  /** LLM provider name (gemini, openai, mock). */
+  llmProvider: string;
+  /** LLM model name. */
+  llmModel: string;
+  /** LLM request timeout in milliseconds. */
+  llmTimeoutMs: number;
   /** Comma-separated RSS feed URLs for topic discovery. Empty in the foundation phase. */
   discoveryRssFeeds: string[];
   /** Maximum milliseconds for one external topic-source HTTP request. */
@@ -64,7 +70,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       3600,
       "SCHEDULER_INTERVAL_SECONDS",
     ),
-    openAiApiKey: env.OPENAI_API_KEY || "",
+    llmApiKey: env.LLM_API_KEY || env.OPENAI_API_KEY || "",
+    llmProvider: env.LLM_PROVIDER || "gemini",
+    llmModel: env.LLM_MODEL || "gemini-2.5-flash",
+    llmTimeoutMs: parsePositiveInt(env.LLM_TIMEOUT_MS, 30000, "LLM_TIMEOUT_MS"),
     discoveryRssFeeds: (env.DISCOVERY_RSS_FEEDS || "")
       .split(",")
       .map((f) => f.trim())

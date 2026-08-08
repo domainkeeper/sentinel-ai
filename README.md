@@ -8,7 +8,7 @@ The system is designed around one constraint: the evaluator calls `POST /api/age
 
 ---
 
-## Status: Phase 2C — Editorial Decision Engine
+## Status: Phase 2D — Content Generation + Rationale
 
 This repository currently contains:
 
@@ -18,12 +18,11 @@ This repository currently contains:
 - ✅ **Live topic discovery** from real RSS feeds through a clean `TopicSource` abstraction
 - ✅ Discovery persistence: candidates are stored in the `topics` trail in a `discovered` state and updated with editorial decisions (`publish`/`reject`)
 - ✅ **Editorial Decision Engine**: a real deterministic rule-based scoring and threshold engine evaluating relevance, freshness, novelty, source quality, and persona fit with structured rejection reasons and persisted scores
+- ✅ **Content Generation + Rationale (`LlmContentGenerator`)**: transforms approved topics into persona-consistent social posts and specific, falsifiable rationales using Gemini, OpenAI, or mock providers with strict prompt boundaries, input/output validation, finite timeouts, and error isolation
 - ✅ Graceful failure handling, finite HTTP timeouts, and basic source-level deduplication
-- ✅ The lifecycle seam: interfaces for discovery, editorial engine, generator, and memory (discovery & editorial are real; generator and memory are still no-op stubs)
-- ✅ Configuration foundation (`.env.example`, no secrets)
-- ✅ Test suite (67 tests) + strict typecheck
+- ✅ Test suite (71 tests) + strict typecheck + build verification
 
-**Not yet implemented:** content/LLM generation and memory/semantic deduplication. The editorial engine now evaluates and approves/rejects discovered candidates, but the content generator is still a stub, so **publishing does not exist yet** — a scheduler cycle discovers and decides on topics but creates no posts.
+**Not yet implemented:** memory (semantic deduplication) and final post publishing cadence (the posts table stays empty as publishing is deferred to Phase 2E). Approved topics undergo LLM generation and generate verified drafts/reasoning stored in the audit trail, but feed publishing is decoupled.
 
 See [docs/architecture.md](docs/architecture.md) for full details.
 

@@ -7,12 +7,12 @@
 
 ## Current Phase
 
-Phase 2C — Editorial Decision Engine
+Phase 2D — Content Generation + Rationale
 
 ## Project Identity
 
 Sentinel AI (do NOT rename; do NOT call it Aegis). The runtime persona is
-configurable and supplied via `POST /api/agent/init` — never hardcoded.
+supplied via `POST /api/agent/init` — never hardcoded.
 
 ## Hackathon Problem
 
@@ -21,7 +21,7 @@ exactly once, then only polls `GET /api/agent/feed` for ~48 hours. No further pr
 
 ## Current Objective
 
-Implement a real deterministic editorial decision engine that scores and filters discovered candidate topics against a publish threshold based on dimensions such as relevance, freshness, novelty, source quality, and persona fit, persisting structured reasoning and decisions in the SQLite `topics` audit trail — while keeping the content generator and memory as stubs (no posts published yet).
+Implement real LLM-backed content generation and specific, falsifiable rationale generation for approved editorial topics (`LlmContentGenerator`), complete with configuration, prompt isolation, strict prompt-injection defense, output validation, finite timeouts, error/rate-limit handling, lifecycle integration, and comprehensive unit tests.
 
 ## Implemented
 
@@ -29,18 +29,18 @@ Implement a real deterministic editorial decision engine that scores and filters
 - Exact API contract (`POST /api/agent/init`, `GET /api/agent/feed`).
 - Autonomous scheduler & lifecycle with restart recovery and failure isolation.
 - Live topic discovery from curated RSS feeds (`TopicSource`, `RssFeedSource`, `LiveTopicDiscovery`, timeout, deduplication).
-- **Deterministic Editorial Decision Engine (`DeterministicEditorialEngine`)**:
-  - Scores candidates across 5 dimensions: relevance, freshness, novelty, source quality, and persona fit (0–100).
-  - Threshold-based decision (`publish` if score >= threshold, default 60; otherwise `reject`).
-  - Structured reasons and per-axis breakdown persisted in the `topics` audit trail.
-- Dependency: `rss-parser`.
+- Deterministic Editorial Decision Engine (`DeterministicEditorialEngine`) scoring across relevance, freshness, novelty, source quality, and persona fit against threshold (default 60), persisting structured reasoning and decisions in the `topics` audit trail.
+- **Content Generation + Rationale (`LlmContentGenerator`)**:
+  - Provider-agnostic `ContentGenerator` abstraction supporting Gemini, OpenAI, and mock providers.
+  - Environment configuration (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_MS`) with zero secrets committed.
+  - Isolated prompt builder (`buildGenerationPrompt`) with strict XML boundaries (`<persona>`, `<editorial_decision>`, `<topic>`, `<source_material>`, `<output_requirements>`) defending against prompt injection.
+  - Robust output validation and sanitization (`validateAndSanitizeOutput`) ensuring mandatory text and rationale fields, length limits, and application-controlled source attribution.
+  - Lifecycle integration: approved topics undergo LLM generation while rejected topics bypass generation entirely. Failures, timeouts, and rate limits are safely caught and isolated.
 
 ## Not Implemented (intentionally deferred)
 
-- Content / LLM generation (Phase 2D).
-- Rationale generation via LLM.
-- Memory (recent posts, near-duplicate detection, semantic similarity / embeddings).
-- Publishing (posts table stays empty).
+- Memory with semantic deduplication and long-term post retrieval.
+- Publishing cadence / cooldown system (posts table stays empty; publishing belongs to Phase 2E).
 
 ## Architecture
 
@@ -53,7 +53,8 @@ AutonomousLifecycle.persistDiscovered → topics (decision = "discovered")
     ↓
 DeterministicEditorialEngine.evaluate → verdicts → topics.updateDecision (publish / reject)
     ↓
-Approved candidate reaches generator stub (NoopContentGenerator) → No publication
+IF reject: stop
+IF approve: LlmContentGenerator.generate → validated draft + rationale → persisted in decision reasoning
     ↓
 GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 ```
@@ -62,10 +63,13 @@ GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 
 - Feed endpoint (`GET /api/agent/feed`) is a **pure reader**; it never triggers discovery, generation, or scheduling.
 - `init` does **not** synchronously generate posts.
-- The scheduler owns autonomous execution; one tick == one discovery & editorial cycle.
+- The scheduler owns autonomous execution; one tick == one discovery & editorial & generation cycle.
 - Editorial engine is deterministic, explainable, and testable without LLMs.
 - Discovered candidates are initially stored as `discovered` and updated to `publish` or `reject` upon editorial evaluation.
+- Approved candidates are transformed into drafts by the content generator; rejected candidates never invoke the generator.
 - No secrets committed; SQLite (`node:sqlite`) stays the persistence layer.
+- LLM failures, timeouts, and rate limits do not crash or hang the autonomous scheduler.
+- Source material is treated strictly as untrusted data.
 
 ## Current Data Model
 
@@ -75,7 +79,7 @@ GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 
 **topics** (rejection/decision trail) `id` PK, `agent_id` FK, `title`, `summary`, `source_url`,
 `source_name`, `discovered_at`, `source_published_at` (nullable), `decided_at` (nullable),
-`decision` (`discovered`/`reject`/`publish`), `reasoning` (JSON). Indexed by
+`decision` (`discovered`/`reject`/`publish`), `reasoning` (JSON containing editorial scores, rejection reasons, and generated draft text/rationale when approved). Indexed by
 `(agent_id, discovered_at DESC)` and `(agent_id, source_url)`.
 
 **scheduling** `agent_id` PK/FK, `last_run_at`, `next_run_at`, `active`, `created_at`, `updated_at`.
@@ -83,23 +87,25 @@ GET /api/agent/feed = pure reader of SQLite `posts` (never triggers work)
 ## Current AI Components
 
 - **Scheduler** — ✅ Implemented (`AutonomousScheduler`).
-- **Lifecycle** — ✅ Implemented (`AutonomousLifecycle`; discovery & editorial wired in).
+- **Lifecycle** — ✅ Implemented (`AutonomousLifecycle`; discovery, editorial, and generator wired in).
 - **Discovery** — ✅ Implemented (`LiveTopicDiscovery` + `RssFeedSource`).
 - **Editorial** — ✅ Implemented (`DeterministicEditorialEngine`).
-- **Generator** — 🔲 Stub (`NoopContentGenerator`).
+- **Generator** — ✅ Implemented (`LlmContentGenerator` + prompt builder + validator).
 - **Memory** — 🔲 Stub (`NoopAgentMemory`).
 
 ## Tests
 
-Last verified: `npm run typecheck` passes (strict TS); `npm test` **67/67 pass** (including `tests/editorial.test.ts`).
+Last verified: `npm run typecheck` passes (strict TS); `npm test` **71/71 pass** (including `tests/generator.test.ts`).
 
 ## Important Architectural Decisions
 
 1. Node.js + TypeScript + Express; SQLite via Node's built-in `node:sqlite`.
 2. Feed = pure reader; scheduler owns autonomous execution.
-3. Deterministic, rule-based scoring across 5 axes (relevance, freshness, novelty, source quality, persona fit) against a threshold (default 60).
-4. Structured JSON reasoning and per-axis breakdown persisted in SQLite `topics` table.
-5. Separation of concerns: discovery finds, editorial decides, generator (future) writes.
+3. Deterministic, rule-based scoring across 5 axes against a threshold (default 60).
+4. Content generation strictly downstream of editorial approval (rejected topics never invoke the LLM).
+5. Isolated prompt builder with XML tags separating persona, editorial decision, topic, and untrusted source material for prompt-injection defense.
+6. Application-controlled canonical source attribution (model cannot override source URLs).
+7. Timeout and failure isolation: LLM errors, timeouts, and rate limits are caught safely so the scheduler remains alive.
 
 ## Known Issues
 
@@ -107,18 +113,17 @@ Last verified: `npm run typecheck` passes (strict TS); `npm test` **67/67 pass**
 
 ## Deferred Work
 
-- Phase 2D — Content Generation + Rationale.
-- Memory with semantic dedup.
-- Publishing cadence / cooldown.
+- Memory with semantic deduplication.
+- Publishing cadence / cooldown system (Phase 2E).
 
 ## Exact Next Phase
 
-Phase 2D — Content Generation.
+Phase 2E — Memory & Publishing.
 
 ## Last Completed Session
 
-Session 4 — Editorial Decision Engine.
+Session 5 — Content Generation + Rationale.
 
 ## Last Verified Commit
 
-Working tree contains Phase 2C implementation.
+Working tree contains Phase 2D implementation.

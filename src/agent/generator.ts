@@ -1,4 +1,5 @@
 import type { Agent, TopicCandidate } from "../models/index.js";
+import type { EditorialVerdict } from "./editorial.js";
 
 /** Draft content produced by the generator for an approved topic. */
 export interface DraftContent {
@@ -19,5 +20,10 @@ export interface DraftContent {
  */
 export interface ContentGenerator {
   /** Generate post text + rationale for an approved topic. */
-  generate(agent: Agent, topic: TopicCandidate): Promise<DraftContent>;
+  generate(
+    agent: Agent,
+    topic: TopicCandidate,
+    verdict: EditorialVerdict,
+    allVerdicts?: EditorialVerdict[],
+  ): Promise<DraftContent>;
 }
