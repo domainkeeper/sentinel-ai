@@ -12,7 +12,7 @@ async function main() {
   // Recover persisted scheduling state so autonomous cycles resume after a restart.
   scheduler.recover(agents.listAll());
 
-  const server = app.listen(config.port, () => {
+  const server = app.listen(config.port,"0.0.0.0", () => {
     console.log(`[sentinel-ai] API listening on http://localhost:${config.port} (${config.env})`);
     // Start the scheduler only after the server is listening.
     scheduler.start();

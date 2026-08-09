@@ -1,0 +1,33 @@
+# --- Dependencies / build output ---
+node_modules/
+dist/
+
+# --- Environment (secrets) ---
+.env
+.env.local
+.env.production
+
+# --- Runtime data — DB is mounted as a Docker volume, not baked in ---
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- The frontend lives on another branch; exclude it from the image ---
+frontend/
+
+# --- Docs / tests / tooling not needed at runtime ---
+docs/
+*.log
+logs/
+coverage/
+.vitest/
+simdata/
+.git/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
