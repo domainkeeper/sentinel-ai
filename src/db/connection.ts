@@ -20,7 +20,7 @@ export function openDatabase(config: Pick<AppConfig, "databasePath">): DatabaseS
     mkdirSync(dirname(absolute), { recursive: true });
   }
 
-  const db = new DatabaseSync(config.databasePath);
+  const db = new DatabaseSync(absolute);
   // Reduce I/O stalls; WAL is optional for :memory: but harmless.
   try {
     db.exec("PRAGMA journal_mode = WAL;");
