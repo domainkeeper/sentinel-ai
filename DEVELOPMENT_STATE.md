@@ -7,7 +7,9 @@
 
 ## Current Phase
 
-Phase 2.2 — Feed Experience (COMPLETE). Backend Phase 3A complete; Phase 2.1 frontend foundation complete.
+Phase 2.4 — Premium, persona-agnostic Editorial Frontend (COMPLETE). Backend Phase 3A complete; Phase 2.1 foundation and Phase 2.2 feed experience complete.
+
+> IMPORTANT product correction applied in this session: Sentinel is an autonomous **editorial / content system** with a configurable persona — **not a cybersecurity product**. The UI no longer reads as a dark monitoring terminal; it is a warm, light, editorial-premium platform whose accent is person-agnostic.
 
 ## Project Identity
 
@@ -21,9 +23,11 @@ exactly once, then only polls `GET /api/agent/feed` for ~48 hours. No further pr
 
 ## Current Objective
 
-Phase 2.2 (complete): replace the placeholder Feed and Post-detail views with a REAL feed experience wired to `GET /api/agent/feed?agentId=...` — rendering live posts newest-first with timestamps, text, rationale, and source links, plus deliberate loading / empty / error / retry states. Post-detail reuses the existing feed response (no new backend endpoint). The frontend remains presentation-only; it never triggers generation, discovery, or publishing.
+Phase 2.4 (complete): redesign of the judge-facing frontend as a **persona-agnostic, editorial, light** product — warm-paper surfaces, ink text, a single adaptive accent, serif editorial display type (Fraunces) paired with Inter + JetBrains Mono, and a light mesh gradient atmosphere (soft color pools, ruled grid, grain, soft light sweep; reduced-motion aware). No animation library added — effects are pure CSS + small hooks. NO data is faked: views that depend on the not-yet-implemented `/status` and `/topics` endpoints stay honest ("Awaiting status feed", "Phase 2.3"). Copy was reframed platform-first ("one agent · every persona") while Activity / Editorial / Persona / Health views remain presentation-only, and all routing/error/empty states were preserved and verified.
 
-Phase 3A (backend memory & publication) and Phase 2.1 (frontend foundation) are COMPLETE and are not being redone.
+Also fixed the pre-existing "blank screen" defect root causes: (1) the canonical layout-route pattern (single `<Routes>` + layout `<Route>` with `<Outlet/>` — no nested second `<Routes>`), and (2) `Magnetic`/`AmbientBackground` calling `window.matchMedia` unguarded, which threw in environments where the API is missing (e.g. Node/jsdom) and took down rendering. Both are now defensively guarded, so a failing view degrades to a styled boundary instead of a blank app.
+
+The realness rules carry through from Phase 2.2 (presentation-only, never triggers generation) and Phase 3A (backend complete, not redone).
 
 ## Implemented
 
@@ -48,11 +52,21 @@ Phase 3A (backend memory & publication) and Phase 2.1 (frontend foundation) are 
   - States (`States.tsx` + `feed.css`): live "pulse" loading, graceful empty ("no posts yet" — not an error), friendly error with Retry.
   - Live polling (`refreshIntervalMs`, default 60s) silently refreshes without blanking existing posts.
   - Automated tests (`src/__tests__/feed.test.tsx`, 9 tests).
+- **Phase 2.4 — Editorial premium redesign (complete):**
+  - Design system v3: warm-paper light theme (tokens.css) — paper surfaces, ink text, one adaptive accent (indigo→violet→teal), editorial serif display (Fraunces) + Inter body + JetBrains Mono data, `prefers-reduced-motion` fallback.
+  - `AmbientBackground`: light mesh atmosphere (pastel color pools, ruled grid, dots, film grain, soft light sweep, pointer spotlight) — no dark monitoring-room + no animation library.
+  - Premium primitives: `Reveal`/`useInView`, `GradientText`, `SpotlightCard`, `PremiumButton`, `StatusIndicator`, `Eyebrow`, `LifecycleTimeline`, skeleton states.
+  - Page transitions (CSS `page-enter` keyed on route + scroll-to-top on navigate) + top-level `ErrorBoundary` in `main.tsx` + route-scoped `RouteBoundary`.
+  - Editorial `OverviewPage` (hero + mission + operative model + principles + real recent-publications preview) and an editorial PostDetail reading experience (serif lead, reading-width column, sourced rationale callout).
+  - Activity / Editorial / Persona / Health views restyled presentation-only and copy reframed platform-first; honest labels where live data is pending (no fabricated metrics).
+  - Persona visibility: Persona page now explicitly distinguishes Product = Sentinel from Persona = configurable identity.
+  - Blank-screen fixes: guaranteed layout-route routing + guards for `window.matchMedia` in `Magnetic` and `AmbientBackground` (previously unguarded → crash in non-browser envs).
+  - Automated tests: 22/22 passing (feed + navigation/route-reliability suites).
 
 ## Not Implemented (intentionally deferred)
 
-- External social media network integrations (LinkedIn / X API publishing; simulated via SQLite + feed per hackathon rules).
-- Phase 2.3+ frontend views: Autonomous Activity, Editorial Intelligence, Persona updates, System Health (depends on backend `/status` and `/topics` endpoints — not yet added).
+- External social media integrations (LinkedIn / X API publishing; simulated via SQLite + feed per hackathon rules).
+- Live Autonomous Activity / Editorial trail / System Health metrics (depend on backend `/status` and `/topics` endpoints — not yet added; views are designed and labelled awaiting them).
 
 ## Architecture
 
@@ -99,7 +113,7 @@ Frontend (Vite + React + TS) : FeedList → PostCard → PostDetailView (reuses 
 ## Tests
 
 - Backend: `npm test` **74/74 pass** (11 files); `npm run typecheck`; `npm run build` all pass.
-- Frontend: `npm test` **9/9 pass** (feed experience suite); `npm run typecheck` (`tsc -b`); `npm run build` (`tsc -b` + `vite build`) all pass.
+- Frontend: `npm test` **22/22 pass** (feed + navigation suites); `npm run typecheck` (`tsc -b`); `npm run build` (`tsc -b` + `vite build`, ~63 kB gzipped JS) all pass.
 
 ## Important Architectural Decisions
 
@@ -110,10 +124,12 @@ Frontend (Vite + React + TS) : FeedList → PostCard → PostDetailView (reuses 
 5. Cooldown and sliding window limits to prevent bursty publications.
 6. Frontend is a separate Vite + React + TypeScript app in `frontend/`, independently deployable, presentation-only.
 7. Phase 2.2: feed wired to the existing `GET /api/agent/feed` contract; post detail reuses it by id — no new backend endpoints in this phase.
+8. Phase 2.4: animations are pure CSS + two small hooks (`useInView`) — no runtime animation dependency; reduced-motion is respected app-wide.
+9. Product identity: the core UI is **Sentinel the platform** (persona-agnostic); the persona is a configurable identity shown on the Persona page. The frontend is light/editorial, not a dark cybersecurity console.
 
 ## Known Issues
 
-- Frontend `api.ts` still exports `getStatus`/`getEditorialTrail` types that the backend does not yet serve (Phase 2.3 will add the endpoints).
+- Frontend `api.ts` still exports `getStatus`/`getEditorialTrail` types that the backend does not yet serve (Phase 2.3 will add the endpoints); Activity/Editorial/Health views are designed but show "Awaiting" until then.
 - Frontend tests currently rely on `globals: true` in the vitest config (for Testing Library auto-cleanup).
 - Nothing WIP; all verified passing.
 
@@ -128,8 +144,8 @@ Phase 2.3 — Autonomous Intelligence Visualization: Activity + Editorial Intell
 
 ## Last Completed Session
 
-Session 8 — Phase 2.2: Feed Experience (plus Session 7 Phase 2.1 and Session 6 Phase 3A).
+Session 10 — Phase 2.4 round 2: persona-agnostic editorial redesign + zero-blank-screen/routing fixes (preceded by Session 9 Phase 2.4 premium polish, Session 8 Phase 2.2, Session 7 Phase 2.1, Session 6 Phase 3A).
 
 ## Last Verified Commit
 
-Working tree contains Phase 3A (backend), Phase 2.1 (frontend foundation), and Phase 2.2 (feed). All verified: backend 74/74 tests + typecheck + build; frontend 9/9 tests + typecheck + build.
+Working tree contains Phase 3A (backend), Phase 2.1 (foundation), Phase 2.2 (feed), Phase 2.4/2.4r2 (editorial premium). Phase 2.5 (backend integration hardening) was NOT done this session. All verified: backend 74/74 + typecheck + build; frontend 22/22 + typecheck + build.

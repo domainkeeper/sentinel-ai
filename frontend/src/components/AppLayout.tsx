@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const NAV_ITEMS: { to: string; label: string }[] = [
   { to: '/', label: 'Overview' },
@@ -30,27 +31,42 @@ function AppNav() {
   );
 }
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout() {
+  // Reset scroll on route change so a freshly-mounting view starts at its top.
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [pathname]);
+
   return (
     <div className="app-shell">
       <header className="app-header">
+        <div className="app-header__glass" aria-hidden="true" />
         <div className="app-header__inner">
-          <a className="brand" href="/">
-            <span className="brand__mark" aria-hidden="true" />
+          <Link className="brand" to="/">
+            <span className="brand__mark" aria-hidden="true">
+              <span className="brand__core" />
+            </span>
             <span className="brand__name">
               Sentinel <em>AI</em>
             </span>
-          </a>
-          <div className="app-header__status mono">
-            <span className="status-dot status-dot--idle" />
-            autonomous · standalone
+          </Link>
+
+          <div className="app-header__right">
+            <div className="app-header__status mono">
+              <span className="status-dot status-dot--live" />
+              one agent · every persona
+            </div>
+            <span className="app-header__tag mono">preview</span>
           </div>
         </div>
       </header>
 
       <div className="app-body">
         <AppNav />
-        <main className="app-content">{children}</main>
+        <main className="app-content">
+          <Outlet />
+        </main>
       </div>
 
       <nav className="app-nav__mobile" aria-label="Mobile">
@@ -68,8 +84,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <footer className="app-footer">
         <div className="app-footer__inner">
-          <span>Sentinel AI — autonomous AI security research agent.</span>
-          <span className="mono">init once · observe ~48h</span>
+          <span>Sentinel AI — an autonomous editorial agent with a configurable persona.</span>
+          <span className="mono">initialize once · observe on its own</span>
         </div>
       </footer>
     </div>

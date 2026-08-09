@@ -5,13 +5,18 @@ import { formatTimestamp, timeAgo } from '../lib/format';
 interface Props {
   post: Post;
   agentId: string;
+  /** Entrance stagger index (drives the --card-i CSS var). */
+  index?: number;
 }
 
-export function PostCard({ post, agentId }: Props) {
+export function PostCard({ post, agentId, index = 0 }: Props) {
   const detailUrl = `/feed/${encodeURIComponent(post.id)}?agentId=${encodeURIComponent(agentId)}`;
 
   return (
-    <article className="feed-card">
+    <article
+      className="feed-card"
+      style={{ ['--card-i' as string]: Math.min(index, 6) }}
+    >
       <header className="feed-card__meta mono">
         <time dateTime={post.createdAt} title={formatTimestamp(post.createdAt)}>
           {formatTimestamp(post.createdAt)} · {timeAgo(post.createdAt)}

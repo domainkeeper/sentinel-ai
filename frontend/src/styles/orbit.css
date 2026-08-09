@@ -1,0 +1,52 @@
+/* ------------------------------------------------------------------ */
+/* Sentinel AI — Orbit                                               */
+/* CSS for the SentinelOrbit SVG glyph. The continuous orbital spin  */
+/* is a pure transform animation (cheap, compositor-only) and is      */
+/* strictly limited to `prefers-reduced-motion: no-preference`.      */
+/* The one-shot ring draw / stagger reveal is driven by Anime.js in  */
+/* JS and gated at runtime by the same preference in the component.  */
+/* ------------------------------------------------------------------ */
+
+.orbit {
+  display: inline-block;
+  position: relative;
+  line-height: 0;
+}
+
+.orbit svg {
+  display: block;
+  overflow: visible;
+}
+
+.orbit [data-orbit-core] {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+.orbit [data-orbit-sat] {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .orbit [data-orbit-spin] {
+    animation: orbit-spin 56s linear infinite;
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+  }
+  .orbit [data-orbit-spin='inner'] {
+    animation-duration: 40s;
+    animation-direction: reverse;
+  }
+}
+
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Where the glyph sits inside panels, keep it visually centred. */
+.orbit--inline {
+  margin-inline: auto;
+}

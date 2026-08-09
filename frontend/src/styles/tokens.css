@@ -1,49 +1,94 @@
 /* ------------------------------------------------------------------ */
-/* Sentinel AI — Design Tokens (Phase 2.1 foundation)                 */
-/* Dark, low-saturation base · one restrained accent · monospace     */
-/* accents for timestamps/status/IDs. See SENTINEL_BLUEPRINT_2.0 B7. */
+/* Sentinel AI — Design Tokens (Phase 2.4 · bright + animated)        */
+/* Sentinel is an autonomous editorial system whose persona is        */
+/* configurable — so the platform base is bright, colourful and        */
+/* domain-neutral. A single adaptive accent carries "active" signals; */
+/* vivid companion colors are reserved for decorative motion only.    */
+/* Surface = paper · Ink = text · color = accent & ambient only.      */
 /* ------------------------------------------------------------------ */
 
 :root {
-  /* Surfaces */
-  --bg: #0a0d12;
-  --bg-elev: #10141b;
-  --bg-elev-2: #161b24;
-  --bg-hover: #1a2130;
+  /* Surfaces — warm paper, not dark glass */
+  --bg: #f5f3ec;
+  --bg-elev: #fffdf8;
+  --bg-elev-2: #efece2;
+  --bg-hover: #f0ede3;
 
   /* Lines */
-  --border: #1d2431;
-  --border-strong: #2a3343;
+  --border: #e4dfd2;
+  --border-strong: #c9c3b2;
 
-  /* Text */
-  --text: #e7eaf0;
-  --text-dim: #9aa3b3;
-  --text-faint: #69717f;
+  /* Text — ink, charcoal, faint */
+  --text: #191a1f;
+  --text-dim: #565a5e;
+  --text-faint: #8b8d86;
 
-  /* Accent (live / active signal) */
-  --accent: #3fd0c4;
-  --accent-strong: #5ee0d4;
-  --accent-dim: rgba(63, 208, 196, 0.14);
+  /* Ambient depths (soft color pools behind content) */
+  --bg-aurora-a: rgba(124, 58, 237, 0.16);
+  --bg-aurora-b: rgba(6, 182, 212, 0.14);
+  --bg-aurora-c: rgba(236, 72, 153, 0.12);
 
-  /* Muted status colors (deliberately not traffic-light garish) */
-  --status-published: #6ee7a0;
-  --status-rejected: #f0b37b;
-  --status-idle: #8a93a5;
-  --status-live: #3fd0c4;
-  --status-error: #e07a7a;
+  /* Screen-blend color wash for the atmosphere (kept light) */
+  --wash-a: rgba(124, 58, 237, 0.20);
+  --wash-b: rgba(6, 182, 212, 0.16);
+  --wash-c: rgba(236, 72, 153, 0.14);
 
-  /* Type */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+  /* Accent — the product's single identity color (persona can re-map) */
+  --accent: #7c3aed;
+  --accent-strong: #6d28d9;
+  --accent-soft: #a78bfa;
+  --accent-dim: rgba(124, 58, 237, 0.10);
+  --accent-glow: rgba(124, 58, 237, 0.32);
+
+  /* Supporting vivid accents — decorative gradients & particles only */
+  --c-cyan: #06b6d4;
+  --c-blue: #3b82f6;
+  --c-pink: #ec4899;
+  --c-amber: #f59e0b;
+  --c-violet: #8b5cf6;
+
+  /* Muted status colors (restrained, not traffic-light) */
+  --status-published: #1f9d5c;
+  --status-rejected: #d08f2c;
+  --status-idle: #9aa09f;
+  --status-live: #15a0aa;
+  --status-error: #d5453f;
+
+  /* Gradient ramps — readable on light paper */
+  --grad-accent: linear-gradient(135deg, #7c3aed 0%, #3b82f6 50%, #06b6d4 100%);
+  --grad-brand: linear-gradient(120deg, #7c3aed 0%, #3b82f6 40%, #06b6d4 70%, #ec4899 100%);
+  --grad-text: linear-gradient(115deg, #312e81 20%, #7c3aed 55%, #0e7490 100%);
+
+  /* Type — editorial serif display, clean sans body, mono for data */
+  --font-display: "Fraunces", "Charter", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Shape / scale */
-  --radius: 8px;
-  --radius-sm: 5px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
   --gap-sm: 6px;
   --gap: 12px;
-  --gap-lg: 20px;
-  --gap-xl: 32px;
+  --gap-lg: 22px;
+  --gap-xl: 40px;
 
-  /* Motion (state change only) */
+  /* Elevation — soft, diffuse shadows for a light canvas */
+  --shadow-1: 0 1px 2px rgba(28, 25, 12, 0.04), 0 10px 30px -16px rgba(28, 25, 12, 0.16);
+  --shadow-2: 0 1px 3px rgba(28, 25, 12, 0.05), 0 24px 60px -28px rgba(28, 25, 12, 0.22);
+  --shadow-glow: 0 0 0 1px rgba(108, 92, 231, 0.16), 0 18px 60px -28px rgba(108, 92, 231, 0.45);
+
+  /* Motion (state change only, springy) */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 0.22s;
+
+  /* Layering */
+  --z-bg: 0;
+  --z-bg-spotlight: 1;
+  --z-content: 2;
+  --z-header: 30;
+  --z-mobile-nav: 40;
+  --z-toast: 60;
 }

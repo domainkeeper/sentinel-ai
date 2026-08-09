@@ -1,0 +1,232 @@
+/* ------------------------------------------------------------------ */
+/* Sentinel AI — Ambient background (Phase 2.4 · editorial light)     */
+/* Warm paper base with soft, drifting color pools — an airy, premium */
+/* "surface in daylight" feel rather than a dark monitoring room.     */
+/* All layers are decorative + aria-hidden and neutralised under      */
+/* prefers-reduced-motion. Motion uses transform/filter only.         */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --spot-x: 50vw;
+  --spot-y: 20vh;
+  --spot-opacity: 0.55;
+}
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg);
+}
+
+/* Base — a soft vertical wash of warm ivory */
+.ambient__base {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 12% 4%, #fbfaf4 0%, var(--bg) 46%, #efecdf 100%);
+}
+
+/* ---- Color pools: screen-blended pastel orbs (light, alive) ------- */
+.ambient__aurora {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  filter: blur(72px) saturate(1.15);
+  opacity: 0.9;
+  will-change: transform;
+  animation: aurora-float 34s ease-in-out infinite;
+}
+
+.ambient__aurora--a {
+  width: 54vw;
+  height: 54vw;
+  top: -16%;
+  left: -12%;
+  background: radial-gradient(circle at 38% 38%, var(--wash-a), transparent 70%);
+}
+
+.ambient__aurora--b {
+  width: 46vw;
+  height: 46vw;
+  bottom: -18%;
+  right: -10%;
+  background: radial-gradient(circle at 60% 40%, var(--wash-b), transparent 70%);
+  animation-duration: 40s;
+  animation-delay: -9s;
+}
+
+.ambient__aurora--c {
+  width: 40vw;
+  height: 40vw;
+  top: 26%;
+  left: 48%;
+  background: radial-gradient(circle at 50% 50%, var(--wash-c), transparent 70%);
+  animation-duration: 46s;
+  animation-delay: -17s;
+}
+
+.ambient__aurora--d {
+  width: 34vw;
+  height: 34vw;
+  top: 50%;
+  left: 2%;
+  background: radial-gradient(circle at 55% 55%, rgba(122, 170, 234, 0.12), transparent 70%);
+  animation-duration: 28s;
+  animation-delay: -6s;
+}
+
+/* A gentle conic wash seats the "band of light" depth without neon. */
+.ambient__conic {
+  position: absolute;
+  inset: -20%;
+  background: conic-gradient(
+    from 120deg at 50% 22%,
+    rgba(124, 58, 237, 0.14),
+    rgba(6, 182, 212, 0.09),
+    rgba(236, 72, 153, 0.08),
+    rgba(59, 130, 246, 0.08),
+    rgba(124, 58, 237, 0.14)
+  );
+  filter: blur(90px) saturate(1.15);
+  opacity: 0.6;
+  animation: aurora-conic 30s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-conic {
+  from { transform: translate3d(-2%, -1%, 0) rotate(0deg); }
+  to   { transform: translate3d(2%, 1%, 0) rotate(8deg); }
+}
+
+@keyframes aurora-float {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(3%, -2%, 0) scale(1.06); }
+  66%  { transform: translate3d(-3%, 2%, 0) scale(0.96); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* A faint ruled-paper grid — warm, editorial, barely visible. */
+.ambient__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(122, 118, 96, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122, 118, 96, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(120% 110% at 50% 0%, #000 12%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 110% at 50% 0%, #000 12%, transparent 78%);
+  transform: translateY(var(--parallax-speed, 0));
+  transition: transform 0.2s linear;
+}
+
+/* Sparse dot ornament in the lower band — not a tech matrix. */
+.ambient__dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(120, 116, 96, 0.10) 1.4px, transparent 1.4px);
+  background-size: 30px 30px;
+  background-position: 15px 15px;
+  mask-image: radial-gradient(70% 36% at 50% 100%, #000 0%, transparent 76%);
+  -webkit-mask-image: radial-gradient(70% 36% at 50% 100%, #000 0%, transparent 76%);
+}
+
+/* Fine grain for an organic, non-digital edge */
+.ambient__noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* A slow, faint beam of light sweeping down — soft, not a scanline. */
+.ambient__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 140px;
+  top: -20%;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  filter: blur(24px);
+  animation: ambient-scan 14s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes ambient-scan {
+  0%   { top: -15%; }
+  100% { top: 112%; }
+}
+
+/* Soft edge vignette to seat content on a light canvas. */
+.ambient__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 120% at 50% 36%, transparent 60%, rgba(44, 38, 22, 0.06) 100%);
+}
+
+/* Pointer-trailing warm spotlight (fine pointers only). */
+.ambient__spotlight {
+  position: absolute;
+  inset: 0;
+  opacity: var(--spot-opacity);
+  transition: opacity 0.6s ease;
+}
+
+.ambient__spotlight::before {
+  content: '';
+  position: absolute;
+  left: var(--spot-x);
+  top: var(--spot-y);
+  width: 560px;
+  height: 560px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.82) 0%, rgba(124, 58, 237, 0.06) 52%, transparent 64%);
+  filter: blur(10px);
+}
+
+/* ---- Interactive colour dot grid (canvas, hue to accent) ----------- */
+/* The InteractiveDotGrid canvas sits just above the ambient wash and */
+/* below content. Its own rAF loop self-pauses under reduced motion   */
+/* or coarse pointers (handled in JS), so no CSS motion fallback is   */
+/* required here.                                                     */
+/* ------------------------------------------------------------------ */
+.dotgrid {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg-spotlight);
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Segregate moving layers onto their own compositor */
+.ambient__aurora,
+.ambient__conic {
+  will-change: transform;
+}
+
+/* Coarse pointers: no cursor spotlight, keep it calm. */
+@media (pointer: coarse) {
+  .ambient__spotlight {
+    opacity: 0 !important;
+  }
+  .ambient__scan {
+    display: none;
+  }
+}
+
+/* Reduced motion: static, tasteful background. */
+@media (prefers-reduced-motion: reduce) {
+  .ambient__aurora,
+  .ambient__conic,
+  .ambient__grid {
+    animation: none;
+    transform: none;
+  }
+  .ambient__scan {
+    display: none;
+  }
+}

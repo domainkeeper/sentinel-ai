@@ -718,3 +718,186 @@ Phase 2.2 completed: the Feed and Post-detail experiences render real posts from
 ### Follow-up
 
 Phase 2.3 — Autonomous Intelligence Visualization (Activity + Editorial Intelligence). This first requires adding the small backend `GET /api/agent/status` and `GET /api/agent/topics` endpoints (Blueprint A6/B3), then wiring the Activity and Editorial views and a Persona/Health population. Update DEVELOPMENT_STATE.md, PROMPTS.md, and the blueprint roadmap. Do not implement until the next scoped session.
+
+---
+
+## Session 9 — Phase 2.4: Peak Premium Frontend
+
+**Date:** 2026-08-10
+
+**Development phase:** Phase 2.4 — Peak Premium Frontend (judge-facing presentation layer)
+
+**AI tool:** OpenCode (opencode CLI)
+
+**Objective:** Transform the existing Phase 2.1/2.2 frontend into a premium, cinematic security-intelligence product without rebuilding the backend and without fabricating data: a cinematic hero/Overview, ambient layered background, motion/page transitions, premium UI primitives, an autonomous-lifecycle visualization, and premiumized Feed/Post-detail reading, plus presentation-only restyles of Activity/Editorial/Persona/Health that stay honest about pending data. Select a coherent, performant animation approach; verify with tests, typecheck, and a production build; update documentation.
+
+### Prompt / Instruction
+
+A continuity prompt instructed: (1) proceed with Phase 2.4 as the next task (the adapters for Phase 2.5 backend-integration-hardening were started earlier but are to be deferred, not bundled here); (2) keep the backend untouched and do not invent data; (3) research premium React component/effect libraries and select ONE coherent approach (favoring small dependencies); (4) implement the premium redesign across the existing routes; (5) preserve the phase 2.2 feed-test-asserted strings ("standing by", "no posts yet", "unable to reach Sentinel", "Retry", "post not found", "Read post", "Back to feed", and source links as real `target="_blank"` anchors with `noopener noreferrer`); (6) verify frontend tests/typecheck/build and backend tests/typecheck/build stay green; (7) update documentation and commit on the `frontend-section` branch.
+
+### AI Work Performed
+
+1. **Audited the frontend** and listed every component/view/style file; read the feed contract, tests, and layouts to pin down the test-asserted strings and role/structure they must keep.
+2. **Researched** premium React effect libraries (Aceternity/Magic UI/React Bits styles, Framer Motion/anime/gsap) and chose pure CSS + two small hooks (`useInView`) as the smallest coherent stack — no new runtime dependency, best bundle/perf, and keeps the app honest and maintainable.
+3. **Design system v2** (`tokens.css`, `global.css`): refined tokens (aurora depths, gradients, display type), the Google Font set (Space Grotesk display · Inter UI · JetBrains Mono) in `index.html`, elevation/glow shadows, and a global `prefers-reduced-motion` fallback that neutralises all cinematic effects.
+4. **Ambient background** (`AmbientBackground.tsx` + `ambient.css`): layered, fixed pure-CSS aurora (three drifting blurred blobs), engineering grid, film-grain noise, vignette, and a pointer-trailing spotlight. It is decorative and `aria-hidden`.
+5. **Premium primitives** (`components/primitives/` + `effects/` + `premium.css`): `GradientText`, `Eyebrow`, `SpotlightCard`, `PremiumButton`, `StatusIndicator`, `Reveal` + `useInView`, `LifecycleTimeline`, polished skeleton/states.
+6. **Page transitions + resilience**: route-keyed CSS `page-enter` animation in `App.tsx` and a top-level `ErrorBoundary` in `main.tsx`.
+7. **Cinematic OverviewPage**: animated hero (headline, gradient text, mission, CTAs, live status pill), operative model (lifecycle), design principles, and a real (never fabricated) recent-publications preview that only calls `getFeed` for an already-selected agent.
+8. **Premium Feed/Post-detail**: page head for Feed, glossy `feed-card` with accent hover/spotlight, an animated "Read post" affordance; all nine existing feed tests passed unchanged.
+9. **Presentation-only Activity / Editorial / Persona / Health**: restyled with lifecycle/pipeline/identity/status layouts and honest "Awaiting status feed"/"Phase 2.3" labels where live metrics depend on not-yet-added backend endpoints. 404 got a premium hero too.
+10. **Verified** frontend (9/9 tests, typecheck, build) and backend (74/74 tests, typecheck, build) and updated docs.
+11. **Removed** the now-unused `PlaceholderView.tsx`.
+
+### Files Affected
+
+**Created:**
+- `frontend/src/components/effects/AmbientBackground.tsx`, `Reveal.tsx`, `SpotlightCard.tsx`, `LifecycleTimeline.tsx`
+- `frontend/src/components/primitives/GradientText.tsx`, `Eyebrow.tsx`, `PremiumButton.tsx`, `StatusIndicator.tsx`
+- `frontend/src/components/ErrorBoundary.tsx`
+- `frontend/src/lib/useInView.ts`
+- `frontend/src/styles/ambient.css`, `premium.css`, `views.css`
+
+**Modified:**
+- `frontend/index.html` (fonts + theme-color)
+- `frontend/src/main.tsx` (ErrorBoundary, AmbientBackground, new imports)
+- `frontend/src/App.tsx` (page transitions)
+- `frontend/src/components/AppLayout.tsx`, `PostCard.tsx`
+- `frontend/src/styles/tokens.css`, `global.css`, `layout.css`, `feed.css`
+- `frontend/src/views/OverviewPage.tsx`, `FeedPage.tsx`, `ActivityPage.tsx`, `EditorialPage.tsx`, `PersonaPage.tsx`, `HealthPage.tsx`, `NotFoundPage.tsx`
+- `DEVELOPMENT_STATE.md`, `PROMPTS.md` (this entry), `SENTINEL_BLUEPRINT_2.0.md` (roadmap), `README.md`, `docs/architecture.md`
+
+**Deleted:**
+- `frontend/src/components/PlaceholderView.tsx`
+
+### Architectural Decisions
+
+1. **No animation framework dependency** — all cinematic effects are hand-rolled CSS (aurora, grid, noise, spotlight, page enter) plus a tiny `IntersectionObserver` hook for scroll reveal. Smallest coherent option after research.
+2. **Purely decorative backdrop** — the ambient layer is `aria-hidden`, fixed, and fully neutralised under `prefers-reduced-motion`.
+3. **Honesty over fabrication** — presentation views for data not yet served (Activity/Editorial/Health metrics) are styled and labelled "Awaiting Phase 2.3", never invented.
+4. **Fix/route preserved** — the 2.5 `api.ts` hardening regression was reverted so this change-set is purely the Phase 2.4 visual/UX; the 2.2 API layer remains the basis for a later Phase 2.5.
+5. **Test contracts preserved** — every Phase 2.2 feed-test assertion (status/empty/error/retry/not-found/read-post/source anchors) still passes.
+
+### Verification
+
+- Frontend: `npm test` **9/9 pass**; `npm run typecheck` (`tsc -b`) passes; `npm run build` (`tsc -b` + `vite build`) passes (63 modules; CSS ~24.75 kB / JS ~195 kB gzip ~62 kB).
+- Backend: `npm test` **74/74 pass** (11 files); `npm run typecheck` and `npm run build` pass (unchanged).
+
+### Result
+
+Phase 2.4 delivered a cinematic, premium frontend that still tells the truth: ambient background and motion across every route, a hero landing, premium components, a lifecycle visualization, no new dependency, and zero fabricated data. All verification passes.
+
+### Follow-up
+
+Decide whether to commit this on the `frontend-section` branch (the working tree is clean of unrelated 2.5 edits) and whether to enable the deferred Phase 2.3 backend endpoints (`/status`, `/topics`) next so Activity/Editorial/Health can show live metrics.
+
+---
+
+## Session 10 — Persona-Agnostic Editorial Redesign + Blank-Screen Fix
+
+**Date:** 2026-08-09
+
+**Development phase:** Phase 2.4 (round 2) — premium, editorial, persona-agnostic frontend; routing reliability.
+
+**Tool/model:** opencode (deepseek-v4-flash-free)
+
+**Objective:** Correct the product direction (Sentinel is an autonomous editorial/content system with a configurable persona, not a cybersecurity product), redesign the frontend visually, and eliminate the blank-screen navigation defect.
+
+### Exact prompt / instruction
+
+A full Phase 2.4 spec was given calling for a premium, modern, brighter, colorful, elegant, persona-agnostic editorial AI experience; explicit instruction "DO NOT" treat Sentinel as cybersecurity; must not be dark/gloomy/terminal/hacker; research premium AI/editorial products; fix a reported blank-screen bug where clicking Feed/other nav blanks the app; keep IA, typography, layouts, animation, backgrounds, responsive, a11y, perf; no fake data; verify every route/direct URL/refresh/back/forward.
+
+### What the AI did
+
+1. **Researched** 2026 premium AI/editorial/typography trends (editorial serif display type, warm paper, restrained palettes, liquid-glass, purposeful motion, moving away from AI-gradient cliches).
+2. **Read** Blueprint 2.0, DEVELOPMENT_STATE, and all current frontend files (views, components, hooks, CSS, tests) and the backend routes.
+3. **Root-caused the blank-screen bug:** two causes - (a) the routing pattern (fixed already with a canonical layout-route + `<Outlet>`, documented in `App.tsx`); (b) `Magnetic` and `AmbientBackground` called `window.matchMedia(...)` without a guard, which throws in non-browser/Node (jsdom) environments and could take down rendering. Added `typeof` guards to both.
+4. **Redesigned the theme** to a warm, editorial light system (paper surfaces, ink text, one adaptive accent):
+   - `tokens.css` - new token set (paper/ink/indigo-violet-teal accent, serif display font) keeping the same variable contract every style file depends on.
+   - `ambient.css` - light mesh atmosphere (pastel pools, ruled grid, grain, soft light sweep) replacing the dark aurora/scan/engineering-grid.
+   - `global.css`, `layout.css`, `premium.css`, `views.css`, `feed.css` - light-theme rewrite preserving the class-name/markup contract and all test-required strings.
+5. **Framed the copy platform-first** (Overview eyebrow/lede/mission, AppLayout brand/footer/status, Persona page distinguishing Product = Sentinel vs Persona = configurable, Activity/Health). Kept every literal string the automated tests depend on (h1 "observes the threat landscape", "Cycle stages", "sleepless observer", "Status.", "Nothing here.", "read post", etc.).
+6. **Polished UX:** Fraunces editorial display font + Inter + JetBrains Mono in `index.html`; scroll-to-top on route change; soft pill nav; editorial PostDetail reading column.
+7. **Documented** the change in DEVELOPMENT_STATE.md and added this PROMPTS entry.
+
+### Files affected
+
+- `frontend/index.html` (editorial fonts + persona-agnostic meta/title)
+- `frontend/src/styles/{tokens,global,ambient,layout,premium,views,feed}.css` (rewritten for the editorial light theme)
+- `frontend/src/components/AppLayout.tsx` (scroll-to-top on route + persona-agnostic status/footer)
+- `frontend/src/components/effects/Magnetic.tsx`, `AmbientBackground.tsx` (guard window.matchMedia)
+- `frontend/src/views/OverviewPage.tsx`, `PersonaPage.tsx`, `ActivityPage.tsx`, `HealthPage.tsx` (copy / persona-agnostic framing)
+- `DEVELOPMENT_STATE.md`, `PROMPTS.md` (this entry)
+
+### Architectural decisions
+
+1. The core product UI is **Sentinel the platform** (persona-agnostic); the persona is a configurable identity surfaced on the Persona page. No hard-coded single-persona theme.
+2. Warm editorial light theme (not a dark/cybersecurity console): paper base, one adaptive accent, restrained misuse of color.
+3. Honor "no fabricated data": no backend exists for `/agent/status` and `/agent/topics`, so Activity/Editorial/Health remain honest, presentation-only states.
+4. No animation library: pure CSS + small hooks; reduced-motion respected app-wide.
+5. Blank-screen failures fixed via bounds-guards + correct layout-route pattern; view-scoped + top-level error boundaries remain.
+
+### Verification
+
+- Frontend: `npm test` **22/22 pass**; `npm run typecheck` (`tsc -b`) passes; `npm run build` (`tsc -b` + `vite build`) passes (66 modules; ~198 kB JS / ~30 kB CSS, gzip ~63 kB / ~7 kB).
+- Backend: unchanged (74/74 reported from prior session).
+
+### Result
+
+The frontend is now a coherent premium, persona-agnostic editorial experience - bright, elegant, typography-led - with the blank-screen defect fixed and all 22 tests + typecheck + build green.
+
+### Follow-up
+
+Optionally add the Phase 2.3 backend endpoints (`/status`, `/topics`) to surface live Activity/Editorial/Health metrics, then enable the 2.5 API-layer hardening. Consider committing on the `frontend-section` branch.
+
+---
+
+## Session 11 — Bright + Animated (React Bits-style dot grid · Anime.js orbit)
+
+**Date:** 2026-08-09
+
+**Development phase:** Frontend visual polish (Phase 2.4, round 2)
+
+**AI tool:** opencode (CLI)
+
+**Objective:** Rework the Phase 2.4 visuals from the "warm light" base toward a brighter, more colourful, living interface. Two additions were directed by the user: a moving, pointer-reactive background in the style of React Bits' "DotGrid", and animated SVG identity drawn with Anime.js. Direction constraints carried over: persona-agnostic, not dark/cyber, huge respect for `prefers-reduced-motion`, cheap animation, no fabricated data, and all 22 tests + test-critical strings preserved.
+
+### Prompt / Task
+
+1. Adopt a React Bits-style animated dot-grid background (canvas, dots that light to the accent colour near the cursor and ripple on fast pointer moves), themed for the light-paper UI.
+2. Add an original animated SVG identity (concentric rings drawing in, a core that ignites, satellites orbiting) using **Anime.js** — read as a living editorial system, not a circuit diagram.
+3. Brighten the palette (more vivid accent + companion colours) while keeping the single-accent rule for "active" signals.
+4. Preserve every test-critical string, the blank-screen guards, and no blank/fabricated states.
+
+### AI Work
+
+opencode executed the following:
+
+1. **Checked Anime.js 4.5.0** (already in `package.json`) and confirmed the ESM module surface: `animate`, `stagger`, `createTimeline`, `createScope` from `'animejs'`, plus `svg.createDrawable` / `morphTo` from the `animejs/svg` entrypoint (verified against `node_modules/animejs/dist/modules/...`).
+2. **Added a motion helper** `frontend/src/lib/motion.ts` — a single `usePrefersReducedMotion()` subscription (via `useSyncExternalStore`) plus an imperative `prefersReducedMotion()`. It returns `true` when the Media Query API is unavailable (e.g. jsdom/tests), so every animation neutralises to a safe static state in non-browser environments.
+3. **Added `InteractiveDotGrid`** (`src/components/effects/InteractiveDotGrid.tsx`) — a self-contained canvas implementation of the React Bits "DotGrid" effect: a grid of base dots that hue toward the accent near the pointer (proximity) and ripple outwards (shockwave) on fast moves. One rAF loop, DPR-capped (≤2), `ResizeObserver`-cleared, auto-paused when the tab is hidden, and under `reduced motion` or coarse pointers it paints a single static grid and never animates. Mounted in `main.tsx` between the ambient wash and the router, replacing the earlier drifting `ParticleField`.
+4. **Added `SentinelOrbit`** (`frontend/src/components/effects/SentinelOrbit.tsx`) — an original abstract SVG glyph: rings are line-drawn via `svg.createDrawable` on a `createTimeline`, the core ignites (scale/opacity spring), satellites stagger in; the indefinite orbital spin runs as a cheap CSS keyframe gated to `no-preference`. It falls back to a calm static glyph under reduced motion; placed in the `Overview` hero (`.hero__orbit`) and the "Standing by" loading state.
+5. **Brightened the palette** in `tokens.css`: accent `#6c5ce7` → `#7c3aed`, vibrant violet/indigo, added decorative companion colours (`--c-cyan/blue/pink/amber/violet`) and a colourful `--grad-brand`; enriched the aurora/conic washes and added `.dotgrid` styling in `ambient.css`, `orbit.css` for the SVG spin, plus hero & loading-state orbit styles in `views.css` / `feed.css`.
+6. **Kept integrity**: removed the now-unused `ParticleField`; all test-critical strings unchanged; reduced-motion + coarse-pointer + tab-hidden safeties enforced; `anime` used only in reachable, error-bound animation paths.
+
+### Files affected
+
+- `frontend/src/lib/motion.ts` (new reduced-motion hierarchy)
+- `frontend/src/components/effects/{InteractiveDotGrid,SentinelOrbit}.tsx` (new)
+- `frontend/src/components/effects/ParticleField.tsx` (removed, superseded)
+- `frontend/src/components/States.tsx` (orbit in "Standing by"), `frontend/src/views/OverviewPage.tsx` (hero orbit)
+- `frontend/src/main.tsx` (mount DotGrid + import `orbit.css`)
+- `frontend/src/styles/{tokens,ambient,orbit}.css` + `views.css`/`feed.css` (bright + animated styles)
+- `frontend/package.json` (anime@^4.5.0)
+
+### Architectural decisions
+
+1. **Animation split**: continuous orbital spin is cheap GPU CSS (transform only), the one-shot reveals (ring draw, stagger) are Anime.js — neither fights the other and both yield under reduced motion.
+2. **Motion helper as the single gate**: all animation code asks `prefersReducedMotion()` once, which also makes test runs deterministic (jsdom → true → static).
+3. **One lively canvas, not several**: consolidated drifting particles into the interactive dot grid to avoid two competing full-screen rAF loops.
+4. Respects `no fabricated data`; docs + copy unchanged in intent.
+
+### Verification
+
+- Frontend: `npm test` 22/22 pass; `tsc -b --noEmit` clean; `npm run build` (`tsc` + `vite build`) succeeds (120 modules; JS ~243 kB / CSS ~31 kB, gzip ~80 kB / ~7 kB). The bundle grew slightly from adding `animejs`.
+- Backend: unchanged.

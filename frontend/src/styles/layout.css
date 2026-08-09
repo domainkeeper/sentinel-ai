@@ -1,21 +1,36 @@
 /* ------------------------------------------------------------------ */
-/* Sentinel AI — App layout & shared components                        */
-/* Top/sidebar nav on desktop, compact bottom nav on mobile (B6).     */
+/* Sentinel AI — App layout & shared components (Phase 2.4 · premium)  */
+/* Editorial header + sidebar nav on desktop, compact bottom nav mobile. */
 /* ------------------------------------------------------------------ */
 
 .app-shell {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
+.app-shell > * {
+  position: relative;
+  z-index: var(--z-content);
+}
+
+/* ---- Header -------------------------------------------------------- */
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 20;
-  background: rgba(10, 13, 18, 0.85);
-  backdrop-filter: blur(8px);
+  z-index: var(--z-header);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  background: rgba(250, 249, 245, 0.72);
+}
+
+.app-header__glass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1));
 }
 
 .app-header__inner {
@@ -23,66 +38,93 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--gap);
-  padding: 12px 20px;
-  max-width: 1180px;
+  padding: 12px 22px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: var(--text);
+  text-decoration: none;
+}
+
+.brand:hover {
+  text-decoration: none;
 }
 
 .brand__mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
   position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--grad-accent);
+  display: grid;
+  place-items: center;
   flex: none;
+  box-shadow: var(--shadow-glow);
 }
 
-.brand__mark::after {
-  content: '';
-  position: absolute;
-  inset: 6px;
+.brand__core {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
+  background: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
 }
 
 .brand__name {
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+  font-weight: 620;
+  font-size: 1.12rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 .brand__name em {
   font-style: normal;
   color: var(--accent-strong);
+  font-weight: 560;
+  font-size: 0.82em;
+  letter-spacing: 0.02em;
 }
 
-.app-header__status {
+.app-header__right,
+.app-header__status,
+.app-header__tag {
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
+}
+
+.app-header__status {
   font-size: 12px;
   color: var(--text-dim);
 }
 
+.app-header__tag {
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* ---- Body + nav ----------------------------------------------------- */
 .app-body {
   flex: 1;
   display: flex;
-  max-width: 1180px;
+  max-width: 1280px;
   margin: 0 auto;
   width: 100%;
 }
 
 .app-nav {
-  width: 216px;
-  padding: var(--gap-xl) var(--gap) var(--gap-xl) 24px;
+  width: 200px;
+  padding: var(--gap-xl) var(--gap-lg) var(--gap-xl) 20px;
   flex: none;
 }
 
@@ -92,45 +134,72 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  position: sticky;
+  top: 92px;
 }
 
 .app-nav__link {
-  display: block;
-  padding: 9px 12px;
-  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 14px;
+  border-radius: var(--radius-pill);
   color: var(--text-dim);
   font-size: 14px;
+  font-weight: 560;
   border: 1px solid transparent;
+  transition:
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.app-nav__link::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .app-nav__link:hover {
   color: var(--text);
-  background: var(--bg-hover);
+  background: var(--bg-elev-2);
   text-decoration: none;
 }
 
 .app-nav__link.active {
-  color: var(--text);
+  color: var(--accent-strong);
   background: var(--bg-elev);
   border-color: var(--border);
+  box-shadow: var(--shadow-1);
+}
+
+.app-nav__link.active::before {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .app-content {
   flex: 1;
   min-width: 0;
-  padding: var(--gap-xl) 24px;
+  padding: var(--gap-xl) 32px calc(var(--gap-xl) * 1.6);
 }
 
+/* ---- Footer -------------------------------------------------------- */
 .app-footer {
   border-top: 1px solid var(--border);
   color: var(--text-faint);
   font-size: 12px;
   padding: var(--gap-lg) 24px;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .app-footer__inner {
-  max-width: 1180px;
+  max-width: 1280px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -138,19 +207,24 @@
   flex-wrap: wrap;
 }
 
-/* Mobile compact bottom nav */
+/* ---- Mobile compact bottom nav -------------------------------------- */
 .app-nav__mobile {
   display: none;
 }
 
-@media (max-width: 760px) {
-  .app-body {
-    flex-direction: column;
-    padding-bottom: 64px;
-  }
-
+@media (max-width: 900px) {
   .app-nav {
     display: none;
+  }
+
+  .app-body {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-body {
+    padding-bottom: 64px;
   }
 
   .app-nav__mobile {
@@ -159,31 +233,40 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 30;
-    background: var(--bg-elev);
+    z-index: var(--z-mobile-nav);
+    background: rgba(255, 253, 248, 0.9);
+    backdrop-filter: blur(16px);
     border-top: 1px solid var(--border);
     overflow-x: auto;
   }
 
   .app-nav__mobile a {
     flex: 1;
-    min-width: 72px;
+    min-width: 64px;
     text-align: center;
-    padding: 10px 4px;
+    padding: 12px 4px;
     font-size: 12px;
+    font-weight: 560;
     color: var(--text-dim);
     white-space: nowrap;
+    border-top: 2px solid transparent;
   }
 
   .app-nav__mobile a.active {
     color: var(--accent-strong);
+    border-top-color: var(--accent);
   }
 
   .app-content {
-    padding: var(--gap-lg) 16px;
+    padding: var(--gap-lg) 16px calc(var(--gap-lg) * 1.6);
   }
 
   .app-header__inner {
-    padding: 0 16px;
+    padding: 0 14px;
+    height: 56px;
+  }
+
+  .app-header__tag {
+    display: none;
   }
 }

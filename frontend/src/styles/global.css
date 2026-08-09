@@ -1,9 +1,15 @@
 /* ------------------------------------------------------------------ */
-/* Sentinel AI — Global styles                                         */
+/* Sentinel AI — Global styles (Phase 2.4 · editorial premium)        */
+/* Warm-paper base, editorial display type, refined focus rings,      */
+/* scrollbar and the shared utility classes + reduced-motion.         */
 /* ------------------------------------------------------------------ */
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -17,15 +23,36 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 15.5px;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--accent-strong);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d2cdbd;
+  border-radius: 8px;
+  border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b19d;
 }
 
 a {
   color: var(--accent-strong);
   text-decoration: none;
+  transition: color var(--dur) var(--ease);
 }
 
 a:hover {
@@ -37,17 +64,39 @@ h2,
 h3,
 h4 {
   margin: 0;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 560;
+  letter-spacing: -0.015em;
+  font-family: var(--font-display);
+  line-height: 1.12;
+  color: var(--text);
+}
+
+h1 {
+  font-size: clamp(2.2rem, 4.6vw, 3.6rem);
+}
+
+h2 {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 0.86em;
+  font-size: 0.84em;
   letter-spacing: 0.02em;
   color: var(--text-dim);
 }
 
+/* ---- Status dot (keep existing contract) ------------------------- */
 .status-dot {
   display: inline-block;
   width: 8px;
@@ -57,7 +106,6 @@ h4 {
   vertical-align: middle;
   flex: none;
 }
-
 .status-dot--published { background: var(--status-published); }
 .status-dot--rejected { background: var(--status-rejected); }
 .status-dot--idle { background: var(--status-idle); }
@@ -68,20 +116,14 @@ h4 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--status-idle);
+  color: var(--text-dim);
 }
 
-.card {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--gap-lg);
-}
-
+/* ---- Shared primitives ------------------------------------------- */
 .section-title {
-  font-size: 13px;
+  font-size: 12.5px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   color: var(--text-faint);
   margin-bottom: var(--gap-sm);
 }
@@ -91,14 +133,139 @@ h4 {
   max-width: 720px;
 }
 
-.placeholder-tag {
-  display: inline-block;
+/* Eyebrow: small kicker above headings */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-mono);
   font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--accent-strong);
   background: var(--accent-dim);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 2px 8px;
-  margin-bottom: var(--gap-lg);
+  border: 1px solid rgba(108, 92, 231, 0.2);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* Gradient headline text (readable ink gradient) */
+.gradient-text {
+  background: var(--grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ---- Reveal on scroll -------------------------------------------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.75s var(--ease-out),
+    transform 0.75s var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- Page transition (route change) ------------------------------ */
+.page-enter {
+  animation: page-in 0.5s var(--ease-out) both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Card entrance (staggered via inline --card-i when desired) */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Balanced headline wrapping for a cleaner, editorial feel */
+.hero__title,
+.page-head__title,
+.section__heading,
+.persona-hero__title {
+  text-wrap: balance;
+}
+
+/* ---- Keyframes used across effects ------------------------------- */
+@keyframes aurora-drift {
+  0% { transform: translate3d(-8%, -4%, 0) scale(1); }
+  50% { transform: translate3d(8%, 6%, 0) scale(1.12); }
+  100% { transform: translate3d(-8%, -4%, 0) scale(1); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.55; }
+  70% { transform: scale(1.7); opacity: 0; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ---- Reduced motion: neutralise ambient & scroll effects --------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }

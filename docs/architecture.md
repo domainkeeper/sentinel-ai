@@ -8,7 +8,7 @@
 
 Problem Statement 3 — Autonomous AI Creator. The evaluator calls `POST /api/agent/init` exactly once, then only polls `GET /api/agent/feed` for ~48 hours. The system must become autonomous immediately after initialization: discover live topics, decide what to publish, write in a consistent voice, remember prior content, and continue publishing over time — all without further human prompts.
 
-## Current Phase (Phase 2.2 — Feed Experience; backend + Phase 2.1 foundation complete)
+## Current Phase (Phase 2.4 — Peak Premium Frontend; backend + 2.1/2.2 frontend complete)
 
 This repository currently implements:
 
@@ -23,7 +23,7 @@ This repository currently implements:
 - **Publishing Policy (`PublishingPolicy`)**: cooldown gaps and sliding-window frequency caps governing autonomous publication.
 - **Post Persistence & Feed**: validated generated posts are persisted to the SQLite `posts` table and exposed via `GET /api/agent/feed` (newest-first, pure reader).
 
-> **Frontend (Phase 2.1 foundation + Phase 2.2 Feed, in place):** a separate **Vite + React + TypeScript** app in `frontend/` is the judge-facing presentation layer. It has a design-system token set (`tokens.css`), global/layout/feed styles, a responsive shell (side nav on desktop / bottom nav on mobile), routing for the IA views (Overview, Feed, PostDetail, Activity, Editorial, Persona, Health), a thin fetch data layer (`api.ts` + `types.ts` + `format.ts`), and a real feed experience wired to `GET /api/agent/feed` (newest-first, loading / empty / error+retry states, safe source links). It holds no agent logic and is independently deployable. Scheduled later: Activity + Editorial Intelligence views (Phase 2.3, needs backend `/status` + `/topics`). See `SENTINEL_BLUEPRINT_2.0.md`.
+> **Frontend (Phase 2.1 + 2.2 + 2.4, in place):** a separate **Vite + React + TypeScript** app in `frontend/` is the judge-facing presentation layer. It has a design-system token set (`tokens.css`), global/layout/feed/premium/ambient/views styles, a responsive shell (side nav on desktop / bottom nav on mobile), routing for the IA views (Overview, Feed, PostDetail, Activity, Editorial, Persona, Health), a thin fetch data layer (`api.ts` + `types.ts` + `format.ts`), and a real feed experience wired to `GET /api/agent/feed` (newest-first, loading / empty / error+retry states, safe source links). Phase 2.4 added a cinematic, dependency-free presentation layer: a fixed pure-CSS ambient background (aurora/grid/noise/vignette/pointer spotlight, reduced-motion aware), premium primitives (`SpotlightCard`, `PremiumButton`, `GradientText`, `Eyebrow`, `StatusIndicator`, `Reveal` via `useInView`, `LifecycleTimeline`), route-keyed page transitions, a top-level `ErrorBoundary`, and redesigned hero/Overview + presentation-only Activity/Editorial/Persona/Health views that stay honest ("Awaiting Phase 2.3") rather than fabricating metrics. It holds no agent logic and is independently deployable. Live Activity/Editorial metrics still need backend `/status` + `/topics` (Phase 2.3). See `SENTINEL_BLUEPRINT_2.0.md`.
 
 ## Architecture Diagram
 
@@ -311,7 +311,7 @@ GET /api/agent/feed?agentId=abc-123
 
 ## Not Implemented (Next Phases)
 
-- Activity + Editorial Intelligence views (Phase 2.3), which require backend `GET /api/agent/status` and `GET /api/agent/topics` endpoints (Blueprint A6/B3).
+- Live data for Activity + Editorial Intelligence views (Phase 2.3), which require backend `GET /api/agent/status` and `GET /api/agent/topics` endpoints (Blueprint A6/B3). The premium frontend views are present but labelled "Awaiting Phase 2.3" (no fabricated metrics).
 - Deployment configuration for a long-running host.
 - Monitoring / heartbeat dashboard on the deployed instance.
 - Additional topic-source types beyond RSS.

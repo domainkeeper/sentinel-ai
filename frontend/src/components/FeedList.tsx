@@ -82,8 +82,8 @@ export function FeedList({ agentId, refreshIntervalMs = 60000 }: FeedFeedListPro
       <p className="section-title">
         Live feed · {sorted.length} post{sorted.length === 1 ? '' : 's'}
       </p>
-      {sorted.map((post) => (
-        <PostCard key={post.id} post={post} agentId={agentId} />
+      {sorted.map((post, i) => (
+        <PostCard key={post.id} post={post} agentId={agentId} index={i} />
       ))}
     </div>
   );

@@ -1,14 +1,19 @@
 import { Link } from 'react-router-dom';
+import { Eyebrow } from '../components/primitives/Eyebrow';
+import { PremiumButton } from '../components/primitives/PremiumButton';
 
 export function NotFoundPage() {
   return (
-    <article>
-      <h1>Not found</h1>
-      <p className="placeholder-tag">404</p>
-      <p className="placeholder-body">
-        This view does not exist. Return to the <Link to="/">overview</Link>.
-      </p>
-    </article>
+    <div className="page">
+      <section className="notfound">
+        <Eyebrow>404</Eyebrow>
+        <h1 className="notfound__title">Nothing here.</h1>
+        <p className="notfound__body mono">No view exists at this address.</p>
+        <Link to="/">
+          <PremiumButton>Return to overview</PremiumButton>
+        </Link>
+      </section>
+    </div>
   );
 }
 

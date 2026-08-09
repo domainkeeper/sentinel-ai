@@ -1,9 +1,13 @@
 /* Deliberate feed states for the live-intelligence feel (Blueprint B6/B7). */
+import { SentinelOrbit } from './effects/SentinelOrbit';
 
 export function LoadingState({ label = 'Standing by' }: { label?: string }) {
   return (
     <div className="feed-state" role="status" aria-live="polite" aria-busy="true">
       <div className="feed-state__pulse" aria-hidden="true" />
+      <div className="feed-state__orbit" aria-hidden="true">
+        <SentinelOrbit size={108} />
+      </div>
       <div className="feed-state__label mono">{label}</div>
       <div className="feed-skeleton" aria-hidden="true">
         <div className="feed-card feed-card--skeleton" />
