@@ -8,10 +8,11 @@ The system is designed around one constraint: the evaluator calls `POST /api/age
 
 ---
 
-## Status: Phase 3A — Memory & Publication
+## Status: Phase 3A complete · Phase 2.1 complete · Phase 2.2 (Feed) complete
 
 This repository currently contains:
 
+- ✅ A **judge-facing frontend** (`frontend/` — Vite + React + TypeScript): design-system tokens, responsive layout, routing for the full Information Architecture, and a **real Feed experience** — live posts from `GET /api/agent/feed` rendered newest-first with timestamps, rationale, and clickable source links, plus a post-detail view and deliberate loading / empty / error / retry states. It is a pure presentation layer over the backend and is independently deployable.
 - ✅ Persistent SQLite storage (agents, posts, topic decisions, scheduling state)
 - ✅ The exact API contract (`init` + `feed`)
 - ✅ The autonomous lifecycle + scheduler (per-agent, persisted next-run, restart recovery, failure isolation, graceful shutdown)
@@ -24,9 +25,9 @@ This repository currently contains:
 - ✅ **Autonomous Publication**: validated generated drafts and rationales are persisted to the SQLite `posts` table with server-side UTC ISO 8601 timestamps and unique application IDs, exposed through the feed endpoint
 - ✅ Test suite (74 tests) + strict typecheck + build verification
 
-**Not yet implemented:** advanced vector/embedding semantic search (local Jaccard token similarity and source-url matching fulfill memory requirements cleanly at this scale).
+**Not yet implemented:** Activity and Editorial Intelligence views (Phase 2.3, which needs small backend `/status` and `/topics` endpoints), deployment (Blueprint 2.7), and advanced vector/embedding semantic search (intentionally out of scope).
 
-See [docs/architecture.md](docs/architecture.md) for full details.
+See [docs/architecture.md](docs/architecture.md) for full details and [SENTINEL_BLUEPRINT_2.0.md](SENTINEL_BLUEPRINT_2.0.md) for the forward roadmap.
 
 ---
 
@@ -126,6 +127,12 @@ npm install
 npm run dev            # start the API (tsx watch)
 npm test               # run the test suite
 npm run typecheck      # strict type-check
+
+# Frontend (separate app in frontend/)
+cd frontend
+npm install
+npm run dev            # Vite dev server (proxies /api to backend on :3000)
+npm run build          # static production bundle in frontend/dist
 ```
 
 ### Environment variables
@@ -148,6 +155,14 @@ src/
   util/           # Helpers (clock, ids, http)
   app.ts          # Composition root
   index.ts        # Entrypoint
+frontend/         # Judge-facing UI (Vite + React + TypeScript)
+  src/
+    components/   # Presentational (FeedList, PostCard, States, AgentConnect)
+    lib/          # API client + types + format helpers (thin data layer)
+    styles/       # Design tokens + global/layout/feed styles
+    views/        # Overview, Feed, PostDetail, Editorial, Activity, Persona, Health
+    __tests__/    # Frontend tests (Vitest + Testing Library)
+  vite.config.ts  # Dev proxy /api -> backend; vitest test config
 tests/            # Vitest suite (incl. tests/discovery)
 docs/             # Architecture docs
 ```

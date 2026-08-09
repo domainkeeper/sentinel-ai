@@ -1,0 +1,49 @@
+/* ------------------------------------------------------------------ */
+/* Sentinel AI — Design Tokens (Phase 2.1 foundation)                 */
+/* Dark, low-saturation base · one restrained accent · monospace     */
+/* accents for timestamps/status/IDs. See SENTINEL_BLUEPRINT_2.0 B7. */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Surfaces */
+  --bg: #0a0d12;
+  --bg-elev: #10141b;
+  --bg-elev-2: #161b24;
+  --bg-hover: #1a2130;
+
+  /* Lines */
+  --border: #1d2431;
+  --border-strong: #2a3343;
+
+  /* Text */
+  --text: #e7eaf0;
+  --text-dim: #9aa3b3;
+  --text-faint: #69717f;
+
+  /* Accent (live / active signal) */
+  --accent: #3fd0c4;
+  --accent-strong: #5ee0d4;
+  --accent-dim: rgba(63, 208, 196, 0.14);
+
+  /* Muted status colors (deliberately not traffic-light garish) */
+  --status-published: #6ee7a0;
+  --status-rejected: #f0b37b;
+  --status-idle: #8a93a5;
+  --status-live: #3fd0c4;
+  --status-error: #e07a7a;
+
+  /* Type */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Shape / scale */
+  --radius: 8px;
+  --radius-sm: 5px;
+  --gap-sm: 6px;
+  --gap: 12px;
+  --gap-lg: 20px;
+  --gap-xl: 32px;
+
+  /* Motion (state change only) */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}

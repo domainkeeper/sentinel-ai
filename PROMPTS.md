@@ -588,3 +588,133 @@ Phase 3A completed successfully. Sentinel AI is now fully autonomous: discoverin
 ### Follow-up
 
 The system is fully operational for the 48-hour evaluation window. Further operational monitoring or deployment hardening can follow if needed.
+
+---
+
+## Session 7 — Phase 2.1: Frontend Foundation
+
+**Date:** 2026-08-09
+
+**Development phase:** Phase 2.1 — Frontend Foundation (judge-facing UI foundation)
+
+**AI tool:** OpenCode (opencode CLI)
+
+**Objective:** Scaffold the judge-facing frontend foundation as the immediate next task after Phase 3A, per SENTINEL_BLUEPRINT_2.0.md B25 Phase 2.1 (acceptance: a deployable placeholder shell). Build a Vite + React + TypeScript presentation layer over the complete, unchanged backend: design tokens, responsive layout, routing for the full Information Architecture, placeholder views, and a thin API data layer — with no business logic and no side effects on the agent.
+
+### Prompt / Instruction
+
+A continuity prompt instructed: (1) read the project continuity documents first — SENTINEL_BLUEPRINT_2.0.md, DEVELOPMENT_STATE.md, README.md, PROMPTS.md, docs/architecture.md, autonomous-ai-creator-blueprint.md; (2) treat Phase 3A as complete and not rebuild the backend; (3) read the entire blueprint, identify the immediate next logical task after Phase 3A, and implement ONLY that task; (4) preserve all existing backend functionality; (5) verify with tests, typecheck, and build; (6) update the documentation and PROMPTS.md honestly; (7) stop — do not continue into the next phase automatically. The blueprint's roadmap identified Phase 2.1 (B25) as the next step.
+
+### AI Work Performed
+
+1. **Audited the repository** — confirmed backend Phase 3A complete, 74/74 tests passing, typecheck/build clean; confirmed PHASE_2_ARCHITECTURE.md and PREMIUM_FRONTEND_AND_DEPLOYMENT_PLAN.md do not exist as separate files (their content lives in Part A and Part B of SENTINEL_BLUEPRINT_2.0.md).
+2. **Scaffolded `frontend/`** as a standalone Vite + React + TypeScript app (own `package.json`, `vite.config.ts`, `tsconfig.json`, `.gitignore`).
+3. **Design-system tokens** (`frontend/src/styles/tokens.css`) matching Blueprint B7: dark low-saturation base, one restrained teal accent for live signals, muted status colors, monospace accents for timestamps/status/IDs, consistent spacing and radius.
+4. **Global + layout styles** (`global.css`, `layout.css`): cards, status dots/labels, sticky header, sidebar nav on desktop and compact bottom nav on mobile (mobile-first, B6).
+5. **Routing + layout** — React Router (HashRouter) routes to six IA views (Overview, Feed, Activity, Editorial, Persona, Health) plus a 404, all wrapped in a shared `AppLayout` shell with the brand mark and footer.
+6. **Thin data layer** — `frontend/src/lib/types.ts` mirrors the backend contract; `frontend/src/lib/api.ts` provides read-mostly fetch helpers (feed, status, topics, init) with timeout and `VITE_API_BASE_URL`/`/api` prod dev proxy, no side effects on the agent (B9/A7).
+7. **Placeholder views** for each IA route with scoped text explaining their Phase 2.2/2.3 wiring.
+8. **Verified** the frontend production build (`tsc -b + vite build`) and assets.
+
+### Files Affected
+
+**Created:**
+- `frontend/package.json`, `frontend/tsconfig.json`, `frontend/vite.config.ts`, `frontend/index.html`
+- `frontend/src/main.tsx`, `frontend/src/App.tsx`
+- `frontend/src/styles/tokens.css`, `frontend/src/styles/global.css`, `frontend/src/styles/layout.css`
+- `frontend/src/lib/types.ts`, `frontend/src/lib/api.ts`
+- `frontend/src/components/AppLayout.tsx`, `frontend/src/components/PlaceholderView.tsx`
+- `frontend/src/views/OverviewPage.tsx`, `FeedPage.tsx`, `ActivityPage.tsx`, `EditorialPage.tsx`, `PersonaPage.tsx`, `HealthPage.tsx`, `NotFoundPage.tsx`
+- `frontend/src/vite-env.d.ts`, `frontend/.gitignore`
+
+**Modified:**
+- `DEVELOPMENT_STATE.md`, `README.md`, `docs/architecture.md`, `SENTINEL_BLUEPRINT_2.0.md` (Phase 2.1 roadmap status only), `PROMPTS.md` (this entry)
+
+### Verification
+
+- `npm run typecheck` — passes in project root.
+- `npm test` — **74/74 pass** (re-run after the frontend scaffold; backend unaffected).
+- `frontend`: `npm install` (74 pkgs) then `npm run build` — `tsc -b` and `vite build` produce `frontend/dist` (index.html + CSS + JS bundle).
+- The backend was not modified in this session.
+
+### Architectural Decisions
+
+1. **Separate standalone frontend app in `frontend/`** — independently deployable/restartable; a frontend failure can never affect the autonomous backend (Blueprint A5/A9).
+2. **Vite + React + TypeScript (SPA)** chosen over Next.js as the lighter alternative explicitly allowed by Blueprint B8 for a foundation shell, matching the "minimize build complexity" option; hash-based routing for simple static hosting.
+3. **Presentation-layer-only**: no agent logic client-side; state flows one way (backend → frontend) per A8/A7.
+4. **Design language follows Blueprint B4/B7** — restrained, live-intelligence feel; status dot/label vocabulary reused everywhere.
+
+### Result
+
+Phase 2.1 frontend foundation scaffolds and builds cleanly. The shell, tokens, layout, route tree, and data layer are in place; backend is unchanged and verified. Phase 2.1's remaining work is deploying the placeholder shell (B25 acceptance).
+
+### Follow-up
+
+Next (Phase 2.2): wire Feed + Post-detail to the real `GET /api/agent/feed` with loading/error/empty states, add frontend unit tests. Then Phase 2.3 requires first adding the small backend `GET /api/agent/status` and `GET /api/agent/topics` endpoints (Blueprint A6) before the Activity/Editorial/persona /Health views can consume data. Update DEVELOPMENT_STATE.md, PROMPTS.md, and this blueprint's roadmap when each is done.
+
+---
+
+## Session 8 — Phase 2.2: Feed Experience
+
+**Date:** 2026-08-09
+
+**Development phase:** Phase 2.2 — Feed Experience
+
+**AI tool:** OpenCode (opencode CLI)
+
+**Objective:** Replace the placeholder Feed and Post-detail views with a real feed experience backed by the existing `GET /api/agent/feed?agentId=...` contract: render live posts newest-first with timestamps, text, rationale, and clickable source links; add deliberate loading / empty / error / retry states; implement a post-detail view reusing the feed response (no new backend endpoint); add frontend tests. The frontend must remain presentation-only — it must never trigger generation, discovery, or publishing. Do NOT implement Phase 2.3 or later.
+
+### Prompt / Instruction
+
+A continuity prompt instructed: (1) read SENTINEL_BLUEPRINT_2.0.md, DEVELOPMENT_STATE.md, README.md, PROMPTS.md, docs/architecture.md, and autonomous-ai-creator-blueprint.md first; (2) treat Phases 3A and 2.1 as complete and do not rebuild the backend; (3) inspect the actual repository; (4) implement ONLY Phase 2.2 — wire the real feed, build post-detail, handle loading/empty/error states, add tests, verify with backend tests/typecheck/build and frontend tests/typecheck/build, update documentation, then stop before Phase 2.3.
+
+### AI Work Performed
+
+1. **Confirmed the backend contract** by reading `src/models/post.ts` (`FeedPost` = `{ id, createdAt, text, rationale, sources }`), `src/services/feedService.ts`, and `src/api/routes.ts` (400 missing agentId, 404 unknown agent, `{ posts: [...] }` newest-first). No backend changes were needed.
+2. **Hardened the data layer** (`frontend/src/lib/api.ts`): added a typed `ApiError` (timeout / network / http / invalid), fetch request timeout, non-2xx handling, and a malformed-response guard. Kept the thin API abstraction; no new dependencies.
+3. **Added helpers**: `src/lib/format.ts` (timestamp + relative-time formatting) and `src/lib/useAgentId.ts` (reads the read-only `?agentId=` URL param).
+4. **Built the feed experience**:
+   - `src/components/FeedList.tsx` — fetches the real feed, sorts newest-first (presentation only), silent live polling (default 60s), and renders `PostCard`s; handles loading / empty / error / retry.
+   - `src/components/PostCard.tsx` — timestamp, text, collapsible rationale, safe source links (`target="_blank" rel="noopener noreferrer"`, never raw HTML, never rewritten), and a "Read post" link.
+   - `src/views/PostDetailPage.tsx` + `src/components/PostDetailView.tsx` — full text, publication timestamp, rationale, stacked source links; reuses the feed response by post id; new route `/feed/:postId?agentId=...`.
+   - `src/components/AgentConnect.tsx` — minimal read-only agent-ID entry that only points the views at an existing initialized agent (never calls init/generate).
+   - `src/components/States.tsx` + `src/styles/feed.css` — live "pulse" loading skeleton, graceful empty state, friendly error state with Retry.
+5. **Wired routing** in `src/App.tsx` (added `/feed/:postId`).
+6. **Added Vitest + Testing Library** to the frontend (`package.json`, `vite.config.ts` `test` block, `src/test/setup.ts`) and wrote `src/__tests__/feed.test.tsx` (9 tests) covering: loading, multiple-posts newest-first, source links as anchors (never raw HTML), empty feed, error + retry, post-card navigation, post-detail rendering, and post-not-found.
+
+### Files Affected
+
+**Created:**
+- `frontend/src/components/FeedList.tsx`, `PostCard.tsx`, `PostDetailView.tsx`, `AgentConnect.tsx`, `States.tsx`
+- `frontend/src/views/PostDetailPage.tsx`
+- `frontend/src/lib/format.ts`, `frontend/src/lib/useAgentId.ts`
+- `frontend/src/styles/feed.css`
+- `frontend/src/__tests__/feed.test.tsx`
+- `frontend/src/test/setup.ts`
+
+**Modified:**
+- `frontend/src/lib/api.ts`, `frontend/src/views/FeedPage.tsx`, `frontend/src/App.tsx`
+- `frontend/package.json`, `frontend/vite.config.ts`
+- `DEVELOPMENT_STATE.md`, `PROMPTS.md` (this entry), `SENTINEL_BLUEPRINT_2.0.md` (roadmap status), `README.md`, `docs/architecture.md`
+
+### Architectural Decisions
+
+1. **Post detail reuses the existing feed response** (fetch feed, find by id) rather than adding a backend endpoint — preserves the pure-reader feed contract and avoids backend changes.
+2. **Frontend is presentation-only** — agent id comes from the URL (`?agentId=`), not a client-side init; no agent logic in the frontend.
+3. **Thin typed data layer with a typed `ApiError`** — components receive user-safe messages; raw stack traces/backend details are never shown.
+4. **Live polling with silent refresh** — existing posts are never blanked while background refresh happens; matches Blueprint B9 (polling on a modest interval).
+5. **Safe source rendering** — sources are anchors opened in a new tab with `noopener noreferrer`; the frontend never rewrites or fabricates attribution.
+
+### Verification
+
+- Backend: `npm run typecheck` (strict TS) passes; `npm test` **74/74 pass** (11 files); `npm run build` passes.
+- Frontend: `npm test` **9/9 pass**; `npm run typecheck` (`tsc -b`) passes; `npm run build` (`tsc -b` + `vite build`) passes.
+- No backend source was modified in Phase 2.2.
+
+### Result
+
+Phase 2.2 completed: the Feed and Post-detail experiences render real posts from `GET /api/agent/feed` newest-first, with deliberate loading / empty / error / retry states, safe clickable source links, and a collapsible rationale. All backend and frontend verification passes.
+
+### Follow-up
+
+Phase 2.3 — Autonomous Intelligence Visualization (Activity + Editorial Intelligence). This first requires adding the small backend `GET /api/agent/status` and `GET /api/agent/topics` endpoints (Blueprint A6/B3), then wiring the Activity and Editorial views and a Persona/Health population. Update DEVELOPMENT_STATE.md, PROMPTS.md, and the blueprint roadmap. Do not implement until the next scoped session.

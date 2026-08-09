@@ -8,7 +8,7 @@
 
 Problem Statement 3 — Autonomous AI Creator. The evaluator calls `POST /api/agent/init` exactly once, then only polls `GET /api/agent/feed` for ~48 hours. The system must become autonomous immediately after initialization: discover live topics, decide what to publish, write in a consistent voice, remember prior content, and continue publishing over time — all without further human prompts.
 
-## Current Phase (Phase 3A — Memory & Publication)
+## Current Phase (Phase 2.2 — Feed Experience; backend + Phase 2.1 foundation complete)
 
 This repository currently implements:
 
@@ -22,6 +22,8 @@ This repository currently implements:
 - **Persistent Memory (`SqliteAgentMemory`)**: exact source URL/title matching and near-duplicate Jaccard token similarity detection with agent isolation and SQLite persistence.
 - **Publishing Policy (`PublishingPolicy`)**: cooldown gaps and sliding-window frequency caps governing autonomous publication.
 - **Post Persistence & Feed**: validated generated posts are persisted to the SQLite `posts` table and exposed via `GET /api/agent/feed` (newest-first, pure reader).
+
+> **Frontend (Phase 2.1 foundation + Phase 2.2 Feed, in place):** a separate **Vite + React + TypeScript** app in `frontend/` is the judge-facing presentation layer. It has a design-system token set (`tokens.css`), global/layout/feed styles, a responsive shell (side nav on desktop / bottom nav on mobile), routing for the IA views (Overview, Feed, PostDetail, Activity, Editorial, Persona, Health), a thin fetch data layer (`api.ts` + `types.ts` + `format.ts`), and a real feed experience wired to `GET /api/agent/feed` (newest-first, loading / empty / error+retry states, safe source links). It holds no agent logic and is independently deployable. Scheduled later: Activity + Editorial Intelligence views (Phase 2.3, needs backend `/status` + `/topics`). See `SENTINEL_BLUEPRINT_2.0.md`.
 
 ## Architecture Diagram
 
@@ -309,17 +311,14 @@ GET /api/agent/feed?agentId=abc-123
 
 ## Not Implemented (Next Phases)
 
-- Editorial scoring engine (novelty, relevance, importance, freshness, persona fit).
-- Content generation + rationale.
-- Memory / duplicate detection (exact + semantic).
-- Publishing cadence / cooldown logic (posts are never created yet).
+- Activity + Editorial Intelligence views (Phase 2.3), which require backend `GET /api/agent/status` and `GET /api/agent/topics` endpoints (Blueprint A6/B3).
 - Deployment configuration for a long-running host.
-- Monitoring / heartbeat dashboard.
+- Monitoring / heartbeat dashboard on the deployed instance.
 - Additional topic-source types beyond RSS.
 
 ## Testing
 
-- `npm test` — Vitest suite (**64 tests**): API contract, repositories + persistence, config parsing, scheduler behavior, scheduling persistence, restart recovery, failure isolation, RSS source (fetch/parse/normalize/malformed/empty), live discovery (multi-source, dedupe, failure isolation), and lifecycle persistence (discovered state, no duplicate source rows, editorial stub → no posts).
+- `npm test` — Vitest suite (**74 tests**, 11 files): API contract, repositories + persistence, config parsing, scheduler behavior, scheduling persistence, restart recovery, failure isolation, RSS source, live topic discovery, editorial engine, content generation, and memory/publishing policy.
 - Discovery tests use **injected fake** HTTP/parser sources — **no dependency on real external websites**, so the suite is never flaky.
 - `npm run typecheck` — strict TypeScript check.
 - Uses an in-memory SQLite database for isolation; a fake clock drives scheduler/discovery deterministically.
